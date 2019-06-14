@@ -16,6 +16,9 @@
 
 typedef unsigned char byte;
 
+#define STRING_BUFFER_SIZE 1024
+
+
 
 int main( int argc, char** argv )
 {
@@ -32,11 +35,9 @@ int main( int argc, char** argv )
 	pngStrings[2] = spaceDiv;
 	pngStrings[3] = fileInputRGB;
 
-	char * strPngToRGB = arrayStringsToString(pngStrings, 4, 1024);
+	char * strPngToRGB = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
 
-	printf("Loading input image");
-	printf(" [%s] ", fileInputName);
-	printf("\n");
+	printf("Loading input image [%s] \n", fileInputName);
 
 	//actually execute the conversion from PNG to RGB, as that format is required for the program
 	int status_conversion = system(strPngToRGB);
@@ -46,20 +47,13 @@ int main( int argc, char** argv )
 		printf("Conversion of input PNG image to RGB was not successful. Program aborting.");
 		return -1;
 	}
-	printf("Converted input image to RGB ");
-	printf(" [%s] ", fileInputRGB);
-	printf("\n");
+	printf("Converted input image to RGB [%s] \n", fileInputRGB);
 
 	//get the height and width of the input image
 	int width = 0;
 	int height = 0;
 
-	int status_image = getImageSize(fileInputName, &width, &height);
-
-	if(status_image != 0)
-	{
-		printf("Loading of input image was not successful. Supported formats are: [PNG/GIF/JPEG]");
-	}
+	getImageSize(fileInputName, &width, &height);
 
 	printf("Size of the loaded image : width=%d height=%d \n", width, height);
 
@@ -74,48 +68,99 @@ int main( int argc, char** argv )
 
 	//#########2. STEP - CONVERT IMAGE TO GRAY-SCALE #################À
 	byte * grayImage;
-	int gray_size_loaded  = rgbToGray(rgbImage, &grayImage, rgb_size);
-	char * file_gray = "imgs_out/lena_gray.gray";
-	writeFile(file_gray, grayImage, gray_size_loaded);
-	printf("Total amount of pixels in gray-scale image is [%d] \n", gray_size_loaded);
+	int gray_size  = rgbToGray(rgbImage, &grayImage, rgb_size);
+	char * file_gray = "imgs_out/img_gray.gray";
 
-	char *pngGrayStrings[4];
+	writeFile(file_gray, grayImage, gray_size);
+	printf("Total amount of pixels in gray-scale image is [%d] \n", gray_size);
 
-	char * file_png_gray = "imgs_out/lena_gray.png";
+	char * file_png_gray = "imgs_out/img_gray.png";
 
-	pngGrayStrings[0] = "convert -size 512x512 -depth 8 ";
-	pngGrayStrings[1] = file_gray;
-	pngGrayStrings[2] = spaceDiv;
-	pngGrayStrings[3] = file_png_gray;
+	pngStrings[0] = "convert -size 512x512 -depth 8 ";
+	pngStrings[1] = file_gray;
+	pngStrings[2] = spaceDiv;
+	pngStrings[3] = file_png_gray;
 
-	char * strGrayToPNG = arrayStringsToString(pngGrayStrings, 4, 1024);
-	status_conversion = system(strGrayToPNG);
+	char * strGrayToPNG = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
+	system(strGrayToPNG);
 
-	if(status_conversion != 0)
-	{
-		printf("Conversion of input gray image to PNG was not successful. Program aborting.");
-	}
+	printf("Converted gray image to PNG [%s] \n ", file_png_gray);
 
-	printf("Converted gray image to PNG ");
-	printf(" [%s] " , file_png_gray);
-	printf("\n");
+	//######################3. Step - Compute vertical and horizontal gradient ##########
+    byte * sobel_h_res;
+    byte * sobel_v_res;
 
+    //kernel for the horizontal axis
+    int sobel_h[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
 
+    itConv(grayImage, gray_size, width, sobel_h, &sobel_h_res);
+    //output the horizontal axis-gradient to a file
+    char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
 
+    //Output the horizontal axis' gradient calculation
+    writeFile(file_out_h_grad, sobel_h_res, gray_size);
 
+    printf("Output horizontal gradient to [%s] \n", file_out_h_grad);
 
+    char * fileHorGradPNG = "imgs_out/sobel_horiz_grad.png";
 
+    printf("Converted horizontal gradient: ");
+	printf("[%s] \n", fileHorGradPNG);
+
+    //Convert the output file to PNG
+
+    pngStrings[0] = "convert -size 512x512 -depth 8 ";
+    pngStrings[1] = file_out_h_grad;
+    pngStrings[2] = spaceDiv;
+    pngStrings[3] = fileHorGradPNG;
+
+    char * strGradToPNG = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
+
+	system(strGradToPNG);
+
+    //kernel for the vertical axis
+    int sobel_v[] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
+
+    itConv(grayImage, gray_size, width, sobel_v, &sobel_v_res);
+
+    char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
+
+    //Output the vertical axis' gradient calculated
+    writeFile(file_out_v_grad, sobel_v_res, gray_size);
+
+    printf("Output vertical gradient to [%s] \n", file_out_v_grad);
+    char * fileVerGradPNG = "imgs_out/sobel_vert_grad.png";
+
+    pngStrings[0] = "convert -size 512x512 -depth 8 ";
+    pngStrings[1] = file_out_v_grad;
+    pngStrings[2] = spaceDiv;
+    pngStrings[3] = fileVerGradPNG;
+
+    strGradToPNG = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
+	system(strGradToPNG);
+
+	//#############4. Step - Compute the countour by putting together the vertical and horizontal gradients##
+
+	byte * countour_img;
+
+    contour(sobel_h_res, sobel_v_res, gray_size, &countour_img);
+
+    char * file_sobel_out = "imgs_out/sobel_countour.gray";
+    writeFile(file_sobel_out, countour_img, gray_size);
+    printf("Output countour to [%s] \n", file_sobel_out);
+    char * file_sobel_png = "imgs_out/sobel_countour.png";
+
+    pngStrings[0] = "convert -size 512x512 -depth 8 ";
+    pngStrings[1] = file_sobel_out;
+    pngStrings[2] = spaceDiv;
+    pngStrings[3] = file_sobel_png;
+
+    char * strSobelToPNG = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
+   	system(strSobelToPNG);
+
+    printf("Converted countour to [%s]", strSobelToPNG);
 
 /*
-
-	//Now actually convert the RGB image to gray-scale
-
-
-	// Read file to rgb and get size
-    byte *sobel_h_res,
-         *sobel_v_res,
-         *contour_img;
-
 	int gray_size = sobelFilter(rgbImage, &grayImage, &sobel_h_res, &sobel_v_res, &contour_img, width, height);
 
 	// Write gray image

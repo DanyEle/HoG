@@ -1,7 +1,15 @@
+//Credits for this file go to: https://github.com/petermlm/SobelFilter
+
 
 #include "file_operations.h"
+#include "string.h"
+#include "stdlib.h"
+#include "math.h"
+
 
 typedef unsigned char byte;
+
+#define SOBEL_OP_SIZE 9
 
 
 
@@ -21,10 +29,87 @@ int rgbToGray(byte *rgb, byte **grayImage, int buffer_size)
     // Calculate the value for every pixel in gray
     for(int i=0; i<gray_size; i++)
     {
+    	//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
         *p_gray = 0.30*p_rgb[0] + 0.59*p_rgb[1] + 0.11*p_rgb[2];
         p_rgb += 3;
         p_gray++;
     }
 
     return gray_size;
+}
+
+
+
+void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, byte *op_mem)
+{
+    int bottom = cindex-width < 0;
+    int top = cindex+width >= buffer_size;
+    int left = cindex % width == 0;
+    int right = (cindex+1) % width == 0;
+
+    op_mem[0] = !bottom && !left  ? buffer[cindex-width-1] : 0;
+    op_mem[1] = !bottom           ? buffer[cindex-width]   : 0;
+    op_mem[2] = !bottom && !right ? buffer[cindex-width+1] : 0;
+
+    op_mem[3] = !left             ? buffer[cindex-1]       : 0;
+    op_mem[4] = buffer[cindex];
+    op_mem[5] = !right            ? buffer[cindex+1]       : 0;
+
+    op_mem[6] = !top && !left     ? buffer[cindex+width-1] : 0;
+    op_mem[7] = !top              ? buffer[cindex+width]   : 0;
+    op_mem[8] = !top && !right    ? buffer[cindex+width+1] : 0;
+}
+
+
+int convolution(byte *X, int *Y, int c_size)
+{
+    int sum = 0;
+
+    for(int i=0; i<c_size; i++) {
+        sum += X[i] * Y[c_size-i-1];
+    }
+
+    return sum;
+}
+
+
+
+void itConv(byte *buffer, int buffer_size, int width, int *op, byte **res)
+{
+    // Allocate memory for result
+    *res = malloc(sizeof(byte) * buffer_size);
+
+    // Temporary memory for each pixel operation
+    byte op_mem[SOBEL_OP_SIZE];
+    memset(op_mem, 0, SOBEL_OP_SIZE);
+
+    // Make convolution for every pixel
+    for(int i=0; i < buffer_size; i++)
+    {
+        // Make op_mem
+        makeOpMem(buffer, buffer_size, width, i, op_mem);
+
+        // Convolution
+        (*res)[i] = (byte) abs(convolution(op_mem, op, SOBEL_OP_SIZE));
+
+        /*
+         * The abs function is used in here to avoid storing negative numbers
+         * in a byte data type array. It wouldn't make a different if the negative
+         * value was to be stored because the next time it is used the value is
+         * squared.
+         */
+    }
+}
+
+
+
+void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img) {
+    // Allocate memory for contour_img
+    *contour_img = malloc(sizeof(byte) * gray_size);
+
+    // Iterate through every pixel to calculate the contour image
+    for(int i = 0; i < gray_size; i++)
+    {
+        (*contour_img)[i] = (byte) sqrt(pow(sobel_h[i], 2) + pow(sobel_v[i], 2));
+    }
 }
