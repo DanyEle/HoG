@@ -45,7 +45,7 @@ void readFile(const char *file_name, byte **buffer, int buffer_size)
  * Writes the RGB/gray-scale buffer to a file
  */
 
-void writeFile(const char *file_name, byte *buffer, int buffer_size)
+void writeFile(const char *file_name, byte *buffer, int buffer_size) //was * buffer
 {
     // Open
     FILE *file = fopen(file_name, "w");

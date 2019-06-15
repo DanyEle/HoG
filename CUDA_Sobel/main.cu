@@ -141,12 +141,38 @@ int main (void)
 	    byte * dev_gray_image;
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_gray_image, gray_size*sizeof(byte)));
 
-	    //actually run the kernel
-	    rgb_img_to_gray <<< 512, 512>>> (dev_r_vec, dev_g_vec, dev_b_vec, dev_gray_image, gray_size) ;
-	    //__global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_b_vec, byte * dev_gray_image, int gray_size)
+	    //actually run the kernel to convert input RGB file to gray-scale
+	    rgb_img_to_gray <<< width, height>>> (dev_r_vec, dev_g_vec, dev_b_vec, dev_gray_image, gray_size) ;
+
+	    byte gray_image[gray_size];
+
+	    //Now take the device gray vector and bring it back to the host
+	    HANDLE_ERROR (cudaMemcpy(gray_image , dev_gray_image , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
+
+	    //let's see what's in there, shall we?
+	    const char * file_gray = "imgs_out/img_gray.gray";
+
+		writeFile(file_gray, gray_image, gray_size);
+		printf("Total amount of pixels in gray-scale image is [%d] \n", gray_size);
+
+		const char * file_png_gray = "imgs_out/img_gray.png";
+
+		char str_width[100];
+		sprintf(str_width, "%d", width);
+
+		char str_height[100];
+		sprintf(str_height, "%d", height);
+
+		const char * pngConvertGray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, spaceDiv, file_png_gray};
+		char * strGrayToPNG = arrayStringsToString(pngConvertGray, 8, STRING_BUFFER_SIZE);
+		system(strGrayToPNG);
+
+		printf("Converted gray image to PNG [%s]\n", file_png_gray);
+
+		//######################3. Step - Compute vertical and horizontal gradient ##########
 
 
-	    //run the rgb_to_gray kernel
-	    //rgb_to_gray <<< height * 3, width*3>>> (dev_rgb_image , &dev_gray_image , gray_size) ;
 
 }
+
+//Don't forget to clean up the device memory!!
