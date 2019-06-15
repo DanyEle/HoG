@@ -49,28 +49,20 @@ int rgbToGray(byte *rgbImage, byte **grayImage, int gray_size)
 
 // CUDA //kernel to convert an image to gray-scale
 //gray-image's memory needs to be pre-allocated
-__global__ void rgb_to_gray( byte * rgb_image, byte * gray_image, int gray_size)
+__global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_b_vec, byte * dev_gray_image, int gray_size)
 {
     //Get the id of thread within a block
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
 	while(tid < gray_size)
 	{
-		if(tid % 3 == 0)
-		{
-		//operate on every single pixel based on the thread ID passed
-		 byte *p_rgb = rgb_image;
+		//r, g, b pixels
+		byte p_r = dev_r_vec[tid];
+		byte p_g = dev_g_vec[tid];
+		byte p_b = dev_b_vec[tid];
 
-
-		 byte *p_gray = gray_image;
-
-		// Calculate the value for every pixel in gray
-
-			//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
-			*p_gray = 0.30*p_rgb[0] + 0.59*p_rgb[1] + 0.11*p_rgb[2];
-			//p_rgb += 3;
-			//p_gray++;
-		}
+		//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
+		dev_gray_image[tid] = 0.30 * p_r + 0.59*p_g + 0.11*p_b;
     	tid += blockDim.x * gridDim.x;
 	}
 }
@@ -125,28 +117,33 @@ int main (void)
 
 		//########2. step - convert RGB image to gray-scale
 
-
-		//allocate memory on the device for the RGB_image vector
 	    int gray_size = rgb_size / 3;
 
-	    byte * rVector;
-	    byte * gVector;
-	    byte * bVector;
+	    byte * rVector, * gVector, * bVector;
 
 	    //now take the RGB image vector and create three separate arrays for the R,G,B dimensions
 	    getDimensionFromRGBVec(0, rgb_image,  &rVector, gray_size);
 	    getDimensionFromRGBVec(1, rgb_image,  &gVector, gray_size);
 	    getDimensionFromRGBVec(2, rgb_image,  &bVector, gray_size);
 
+	    //allocate memory on the device for the r,g,b vectors
+	    byte * dev_r_vec, * dev_g_vec, * dev_b_vec;
+	    HANDLE_ERROR ( cudaMalloc((void **)&dev_r_vec , gray_size*sizeof(byte)));
+	    HANDLE_ERROR ( cudaMalloc((void **)&dev_g_vec, gray_size*sizeof(byte)));
+	    HANDLE_ERROR ( cudaMalloc((void **)&dev_b_vec, gray_size*sizeof(byte)));
 
+	    //copy the content of the r,g,b vectors from the host to the device
+	    HANDLE_ERROR (cudaMemcpy (dev_r_vec , rVector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
+	    HANDLE_ERROR (cudaMemcpy (dev_g_vec , gVector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
+	    HANDLE_ERROR (cudaMemcpy (dev_b_vec , bVector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
 
-	    byte * dev_rgb_image, dev_gray_image;
-	    HANDLE_ERROR ( cudaMalloc((void **)&dev_rgb_image , rgb_size*sizeof(byte) ) );
-	    //allocate memory on the device for the gray_image vector that will contain the output
-	    //HANDLE_ERROR ( cudaMalloc((void **)&dev_gray_image , gray_size*sizeof(byte) ) );
+	    //allocate memory on the device for the output gray image
+	    byte * dev_gray_image;
+	    HANDLE_ERROR ( cudaMalloc((void **)&dev_gray_image, gray_size*sizeof(byte)));
 
-	    //copy the content of the rgb image vector to the device array
-	    //HANDLE_ERROR (cudaMemcpy (dev_rgb_image , rgb_image , rgb_size*sizeof(byte) , cudaMemcpyHostToDevice));
+	    //actually run the kernel
+	    rgb_img_to_gray <<< 512, 512>>> (dev_r_vec, dev_g_vec, dev_b_vec, dev_gray_image, gray_size) ;
+	    //__global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_b_vec, byte * dev_gray_image, int gray_size)
 
 
 	    //run the rgb_to_gray kernel
