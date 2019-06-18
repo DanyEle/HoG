@@ -4,6 +4,15 @@
 
 #define STRING_BUFFER_SIZE 1024
 
+#define SOBEL_OP_SIZE 9
+#include "string.h"
+#include "stdlib.h"
+#include "math.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+
+
 
 
 
@@ -20,40 +29,93 @@ static void HandleError( cudaError_t err, const char *file, int line )
 }
 
 
-//Input: - rgb image contained in the 'rgb' array
-//		 - buffer size: the size of the RGB image
-//Output: gray, an array containing the gray-scale image
-int rgbToGray(byte *rgbImage, byte **grayImage, int gray_size)
+
+//called from 'it_conv' function
+__device__ int convolution(byte *X, int *Y, int c_size)
 {
-    // Take size for gray image and allocate memory. Just one dimension for gray-scale image
-    *grayImage = (byte*) malloc(sizeof(byte) * gray_size);
+    int sum = 0;
 
-    // Make pointers for iteration
-    byte *p_rgb = rgbImage;
-    byte *p_gray = *grayImage;
-
-    // Calculate the value for every pixel in gray
-    for(int i=0; i<gray_size; i++)
-    {
-    	//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
-        *p_gray = 0.30*p_rgb[0] + 0.59*p_rgb[1] + 0.11*p_rgb[2];
-        p_rgb += 3;
-        p_gray++;
+    for(int i=0; i<c_size; i++) {
+        sum += X[i] * Y[c_size-i-1];
     }
 
-    return gray_size;
+    return sum;
+}
+
+//called from 'it_conv' function
+__device__ void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, byte *op_mem)
+{
+    int bottom = cindex-width < 0;
+    int top = cindex+width >= buffer_size;
+    int left = cindex % width == 0;
+    int right = (cindex+1) % width == 0;
+
+    op_mem[0] = !bottom && !left  ? buffer[cindex-width-1] : 0;
+    op_mem[1] = !bottom           ? buffer[cindex-width]   : 0;
+    op_mem[2] = !bottom && !right ? buffer[cindex-width+1] : 0;
+
+    op_mem[3] = !left             ? buffer[cindex-1]       : 0;
+    op_mem[4] = buffer[cindex];
+    op_mem[5] = !right            ? buffer[cindex+1]       : 0;
+
+    op_mem[6] = !top && !left     ? buffer[cindex+width-1] : 0;
+    op_mem[7] = !top              ? buffer[cindex+width]   : 0;
+    op_mem[8] = !top && !right    ? buffer[cindex+width+1] : 0;
 }
 
 
 
 
-// CUDA //kernel to convert an image to gray-scale
+
+
+__global__ void it_conv(byte *buffer, int buffer_size, int width, int *dev_op, byte **dev_res)
+{
+    // Temporary memory for each pixel operation
+    byte op_mem[SOBEL_OP_SIZE];
+    memset(op_mem, 0, SOBEL_OP_SIZE);
+
+	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+	int i = 0;
+
+    // Make convolution for every pixel. Each pixel --> one thread.
+    //for(int i=0; i < buffer_size; i++)
+    while(tid < buffer_size)
+    {
+        // Make op_mem
+        makeOpMem(buffer, buffer_size, width, i, op_mem);
+
+        // Convolution
+        (*dev_res)[i] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
+
+        /*
+         * The abs function is used in here to avoid storing negative numbers
+         * in a byte data type array. It wouldn't make a different if the negative
+         * value was to be stored because the next time it is used the value is
+         * squared.
+         */
+    	tid += blockDim.x * gridDim.x;
+
+    	i = 0;
+
+    }
+}
+
+
+
+
+//Input: dev_r_vec, dev_g_vec, dev_b_vec: vectors containing the R,G,B components of the input image
+//		 gray_size: amount of pixels in the RGB vector / 3
+//Output: dev_gray_image: a vector containing the gray-scale pixels of the resulting image
+
+// CUDA kernel to convert an image to gray-scale
 //gray-image's memory needs to be pre-allocated
 __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_b_vec, byte * dev_gray_image, int gray_size)
 {
     //Get the id of thread within a block
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
+	//pixel-wise operation on the R,G,B vectors
 	while(tid < gray_size)
 	{
 		//r, g, b pixels
@@ -118,7 +180,6 @@ int main (void)
 		//########2. step - convert RGB image to gray-scale
 
 	    int gray_size = rgb_size / 3;
-
 	    byte * rVector, * gVector, * bVector;
 
 	    //now take the RGB image vector and create three separate arrays for the R,G,B dimensions
@@ -169,7 +230,38 @@ int main (void)
 
 		printf("Converted gray image to PNG [%s]\n", file_png_gray);
 
+		//let's de-allocate memory allocated for input R,G,B vectors
+	    cudaFree (dev_r_vec);
+	    cudaFree (dev_g_vec);
+		cudaFree (dev_b_vec);
+
 		//######################3. Step - Compute vertical and horizontal gradient ##########
+
+		//###Compute the HORIZONTAL GRADIENT#####
+
+   	    //host horizontal kernel
+		int sobel_h[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
+
+		int * dev_sobel_h;
+
+		//allocate memory for device horizontal kernel
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h , 9*sizeof(int)));
+
+		//copy the content of the host horizontal kernel to the device horizontal kernel
+	    HANDLE_ERROR (cudaMemcpy (dev_sobel_h , sobel_h , 9*sizeof(int) , cudaMemcpyHostToDevice));
+
+	    //allocate memory for the resulting horizontal gradient on the device
+   	    byte * dev_sobel_h_res;
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h_res , gray_size*sizeof(byte)));
+
+		//perform horizontal gradient calculation
+		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, &dev_sobel_h_res);
+
+
+
+
+
+
 
 
 
