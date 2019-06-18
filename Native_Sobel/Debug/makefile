@@ -44,7 +44,7 @@ all: Native_Sobel
 Native_Sobel: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L/usr/include/opencv -o "Native_Sobel" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++  -o "Native_Sobel" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

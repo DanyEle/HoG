@@ -27,7 +27,7 @@ int rgbToGray(byte *rgb, byte **grayImage, int buffer_size)
     byte *p_gray = *grayImage;
 
     // Calculate the value for every pixel in gray
-    for(int i=0; i<gray_size; i++)
+    for(int i=0; i < gray_size; i++)
     {
     	//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
         *p_gray = 0.30*p_rgb[0] + 0.59*p_rgb[1] + 0.11*p_rgb[2];

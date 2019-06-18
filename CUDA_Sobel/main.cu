@@ -10,8 +10,7 @@
 #include "math.h"
 #include <stdlib.h>
 #include <stdio.h>
-
-
+ #include <time.h>
 
 
 
@@ -141,10 +140,12 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 
 int main (void)
 {
-	//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
+		bool intermediate_output = false;
+
+		//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
 
 		//Specify the input image. Formats supported: png, jpg, GIF.
-		const char * fileInputName = "imgs_in/lena.png";
+		const char * fileInputName = "imgs_in/hua_hua.jpg";
 
 		const char * spaceDiv = " ";
 		const char * fileOutputRGB = "imgs_out/image.rgb";
@@ -181,7 +182,6 @@ int main (void)
 		readFile(fileOutputRGB, &rgb_image, rgb_size);
 
 		//########2. step - convert RGB image to gray-scale
-
 	    int gray_size = rgb_size / 3;
 	    byte * rVector, * gVector, * bVector;
 
@@ -213,25 +213,25 @@ int main (void)
 	    //Now take the device gray vector and bring it back to the host
 	    HANDLE_ERROR (cudaMemcpy(gray_image , dev_gray_image , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
 
-	    //let's see what's in there, shall we?
-	    const char * file_gray = "imgs_out/img_gray.gray";
-
-		writeFile(file_gray, gray_image, gray_size);
-		printf("Total amount of pixels in gray-scale image is [%d] \n", gray_size);
-
-		const char * file_png_gray = "imgs_out/img_gray.png";
-
 		char str_width[100];
 		sprintf(str_width, "%d", width);
 
 		char str_height[100];
 		sprintf(str_height, "%d", height);
 
-		const char * pngConvertGray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, spaceDiv, file_png_gray};
-		char * strGrayToPNG = arrayStringsToString(pngConvertGray, 8, STRING_BUFFER_SIZE);
-		system(strGrayToPNG);
+		if(intermediate_output)
+		{
+			 //let's see what's in there, shall we?
+			const char * file_gray = "imgs_out/img_gray.gray";
+			writeFile(file_gray, gray_image, gray_size);
+			printf("Total amount of pixels in gray-scale image is [%d] \n", gray_size);
+			const char * file_png_gray = "imgs_out/img_gray.png";
 
-		printf("Converted gray image to PNG [%s]\n", file_png_gray);
+			const char * pngConvertGray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, spaceDiv, file_png_gray};
+			char * strGrayToPNG = arrayStringsToString(pngConvertGray, 8, STRING_BUFFER_SIZE);
+			system(strGrayToPNG);
+			printf("Converted gray image to PNG [%s]\n", file_png_gray);
+		}
 
 		//let's de-allocate memory allocated for input R,G,B vectors
 	    cudaFree (dev_r_vec);
@@ -267,23 +267,23 @@ int main (void)
 	    //free-up the memory for the vectors allocated
 	    cudaFree(dev_sobel_h);
 
-	    //output the horizontal axis-gradient to a file
-		const char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
+	    const char * strGradToPNG;
 
-		//Output the horizontal axis' gradient calculation
-		writeFile(file_out_h_grad, sobel_h_res, gray_size);
-
-		printf("Output horizontal gradient to [%s] \n", file_out_h_grad);
-
-		const char * fileHorGradPNG = "imgs_out/sobel_horiz_grad.png";
-
-		printf("Converted horizontal gradient: ");
-		printf("[%s] \n", fileHorGradPNG);
-
-		//Convert the output file to PNG
-		const char * pngConvertHor[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_h_grad, spaceDiv, fileHorGradPNG};
-		const char * strGradToPNG = arrayStringsToString(pngConvertHor, 8, STRING_BUFFER_SIZE);
-		system(strGradToPNG);
+	    if(intermediate_output)
+	    {
+			//output the horizontal axis-gradient to a file
+			const char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
+			//Output the horizontal axis' gradient calculation
+			writeFile(file_out_h_grad, sobel_h_res, gray_size);
+			printf("Output horizontal gradient to [%s] \n", file_out_h_grad);
+			const char * fileHorGradPNG = "imgs_out/sobel_horiz_grad.png";
+			printf("Converted horizontal gradient: ");
+			printf("[%s] \n", fileHorGradPNG);
+			//Convert the output file to PNG
+			const char * pngConvertHor[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_h_grad, spaceDiv, fileHorGradPNG};
+			const char * strGradToPNG = arrayStringsToString(pngConvertHor, 8, STRING_BUFFER_SIZE);
+			system(strGradToPNG);
+	    }
 
 
 		//####Compute the VERTICAL GRADIENT#####
@@ -310,20 +310,22 @@ int main (void)
 
 		//free-up the memory for the vectors allocated
 		cudaFree(dev_sobel_v);
-		//cudaFree(dev_sobel_v_res); //will be needed for final countour computation
 
-		const char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
+		if(intermediate_output)
+		{
+			const char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
 
-		//Output the vertical axis' gradient calculated
-		writeFile(file_out_v_grad, sobel_v_res, gray_size);
+			//Output the vertical axis' gradient calculated
+			writeFile(file_out_v_grad, sobel_v_res, gray_size);
 
-		printf("Output vertical gradient to [%s] \n", file_out_v_grad);
-		const char * fileVerGradPNG = "imgs_out/sobel_vert_grad.png";
+			printf("Output vertical gradient to [%s] \n", file_out_v_grad);
+			const char * fileVerGradPNG = "imgs_out/sobel_vert_grad.png";
 
-		const char * pngConvertVer[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_v_grad, spaceDiv, fileVerGradPNG};
+			const char * pngConvertVer[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_v_grad, spaceDiv, fileVerGradPNG};
 
-		strGradToPNG = arrayStringsToString(pngConvertVer, 8, STRING_BUFFER_SIZE);
-		system(strGradToPNG);
+			strGradToPNG = arrayStringsToString(pngConvertVer, 8, STRING_BUFFER_SIZE);
+			system(strGradToPNG);
+		}
 
 		//#############4. Step - Compute the countour by putting together the vertical and horizontal gradients####
 
@@ -343,17 +345,18 @@ int main (void)
 	    cudaFree(dev_countour_img);
 
 	    //######Display the resulting countour image
-	    const char * file_sobel_out = "imgs_out/sobel_countour.gray";
-	    writeFile(file_sobel_out, countour_img, gray_size);
-	    printf("Output countour to [%s] \n", file_sobel_out);
-	    const char * file_sobel_png = "imgs_out/sobel_countour.png";
 
-	   	const char * pngConvertContour[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_sobel_out, spaceDiv, file_sobel_png};
+		const char * file_sobel_out = "imgs_out/sobel_countour.gray";
+		writeFile(file_sobel_out, countour_img, gray_size);
+		printf("Output countour to [%s] \n", file_sobel_out);
+		const char * file_sobel_png = "imgs_out/sobel_countour.png";
 
-	   	const char * strSobelToPNG = arrayStringsToString(pngConvertContour, 8, STRING_BUFFER_SIZE);
+		const char * pngConvertContour[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_sobel_out, spaceDiv, file_sobel_png};
+
+		const char * strSobelToPNG = arrayStringsToString(pngConvertContour, 8, STRING_BUFFER_SIZE);
 		system(strSobelToPNG);
 
-	    printf("Converted countour: [%s] \n", file_sobel_png);
+		printf("Converted countour: [%s] \n", file_sobel_png);
 
 	    return 0;
 
