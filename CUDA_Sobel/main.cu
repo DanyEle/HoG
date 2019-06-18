@@ -29,13 +29,24 @@ static void HandleError( cudaError_t err, const char *file, int line )
 }
 
 
+__global__ void contour(byte *dev_sobel_h, byte *dev_sobel_v, int gray_size, byte *dev_contour_img)
+{
+	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    // Performed on every pixel in parallel to calculate the contour image
+    while(tid < gray_size)
+    {
+        dev_contour_img[tid] = (byte) sqrt(pow(dev_sobel_h[tid], 2) + pow(dev_sobel_v[tid], 2));
+    	tid += blockDim.x * gridDim.x;
+    }
+}
 
 //called from 'it_conv' function
 __device__ int convolution(byte *X, int *Y, int c_size)
 {
     int sum = 0;
 
-    for(int i=0; i<c_size; i++) {
+    for(int i=0; i < c_size; i++) {
         sum += X[i] * Y[c_size-i-1];
     }
 
@@ -116,12 +127,11 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 		byte p_g = dev_g_vec[tid];
 		byte p_b = dev_b_vec[tid];
 
-		//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
+		//Formula accordidev_ng to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
 		dev_gray_image[tid] = 0.30 * p_r + 0.59*p_g + 0.11*p_b;
     	tid += blockDim.x * gridDim.x;
 	}
 }
-
 
 
 
@@ -256,7 +266,6 @@ int main (void)
 
 	    //free-up the memory for the vectors allocated
 	    cudaFree(dev_sobel_h);
-	    cudaFree(dev_sobel_h_res);
 
 	    //output the horizontal axis-gradient to a file
 		const char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
@@ -293,7 +302,7 @@ int main (void)
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_v_res , gray_size*sizeof(byte)));
 
 		//perform vertical gradient calculation for every pixel
-		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
+		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
 
 		//copy the resulting vertical array from device back to host
 		byte sobel_v_res[gray_size];
@@ -301,7 +310,7 @@ int main (void)
 
 		//free-up the memory for the vectors allocated
 		cudaFree(dev_sobel_v);
-		cudaFree(dev_sobel_v_res);
+		//cudaFree(dev_sobel_v_res); //will be needed for final countour computation
 
 		const char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
 
@@ -316,7 +325,37 @@ int main (void)
 		strGradToPNG = arrayStringsToString(pngConvertVer, 8, STRING_BUFFER_SIZE);
 		system(strGradToPNG);
 
+		//#############4. Step - Compute the countour by putting together the vertical and horizontal gradients####
 
+		//allocate device memory for the final vector containing the countour
+		byte * dev_countour_img;
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_countour_img , gray_size*sizeof(byte)));
+
+		contour <<< width, height>>> (dev_sobel_h_res, dev_sobel_v_res, gray_size, dev_countour_img);
+
+		//copy the resulting countour image from device back to host
+		byte countour_img[gray_size];
+		HANDLE_ERROR (cudaMemcpy(countour_img, dev_countour_img, gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
+
+		//free-up all the memory from the allocate vectors
+	    cudaFree(dev_sobel_h_res);
+	    cudaFree(dev_sobel_v_res);
+	    cudaFree(dev_countour_img);
+
+	    //######Display the resulting countour image
+	    const char * file_sobel_out = "imgs_out/sobel_countour.gray";
+	    writeFile(file_sobel_out, countour_img, gray_size);
+	    printf("Output countour to [%s] \n", file_sobel_out);
+	    const char * file_sobel_png = "imgs_out/sobel_countour.png";
+
+	   	const char * pngConvertContour[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_sobel_out, spaceDiv, file_sobel_png};
+
+	   	const char * strSobelToPNG = arrayStringsToString(pngConvertContour, 8, STRING_BUFFER_SIZE);
+		system(strSobelToPNG);
+
+	    printf("Converted countour: [%s] \n", file_sobel_png);
+
+	    return 0;
 
 
 }
