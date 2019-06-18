@@ -68,7 +68,7 @@ __device__ void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, 
 
 
 
-__global__ void it_conv(byte *buffer, int buffer_size, int width, int *dev_op, byte **dev_res)
+__global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op, byte *dev_res)
 {
     // Temporary memory for each pixel operation
     byte op_mem[SOBEL_OP_SIZE];
@@ -76,18 +76,14 @@ __global__ void it_conv(byte *buffer, int buffer_size, int width, int *dev_op, b
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-	int i = 0;
-
     // Make convolution for every pixel. Each pixel --> one thread.
     //for(int i=0; i < buffer_size; i++)
     while(tid < buffer_size)
     {
         // Make op_mem
-        makeOpMem(buffer, buffer_size, width, i, op_mem);
+        makeOpMem(buffer, buffer_size, width, tid, op_mem);
 
-        // Convolution
-        (*dev_res)[i] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
-
+        dev_res[tid] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
         /*
          * The abs function is used in here to avoid storing negative numbers
          * in a byte data type array. It wouldn't make a different if the negative
@@ -95,9 +91,6 @@ __global__ void it_conv(byte *buffer, int buffer_size, int width, int *dev_op, b
          * squared.
          */
     	tid += blockDim.x * gridDim.x;
-
-    	i = 0;
-
     }
 }
 
@@ -245,22 +238,83 @@ int main (void)
 		int * dev_sobel_h;
 
 		//allocate memory for device horizontal kernel
-		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h , 9*sizeof(int)));
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h , SOBEL_OP_SIZE*sizeof(int)));
 
 		//copy the content of the host horizontal kernel to the device horizontal kernel
-	    HANDLE_ERROR (cudaMemcpy (dev_sobel_h , sobel_h , 9*sizeof(int) , cudaMemcpyHostToDevice));
+	    HANDLE_ERROR (cudaMemcpy (dev_sobel_h , sobel_h , SOBEL_OP_SIZE*sizeof(int) , cudaMemcpyHostToDevice));
 
 	    //allocate memory for the resulting horizontal gradient on the device
    	    byte * dev_sobel_h_res;
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h_res , gray_size*sizeof(byte)));
 
-		//perform horizontal gradient calculation
-		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, &dev_sobel_h_res);
+		//perform horizontal gradient calculation for every pixel
+		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
+
+		//copy the resulting horizontal array from device to host
+		byte sobel_h_res[gray_size];
+	    HANDLE_ERROR (cudaMemcpy(sobel_h_res , dev_sobel_h_res , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
+
+	    //free-up the memory for the vectors allocated
+	    cudaFree(dev_sobel_h);
+	    cudaFree(dev_sobel_h_res);
+
+	    //output the horizontal axis-gradient to a file
+		const char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
+
+		//Output the horizontal axis' gradient calculation
+		writeFile(file_out_h_grad, sobel_h_res, gray_size);
+
+		printf("Output horizontal gradient to [%s] \n", file_out_h_grad);
+
+		const char * fileHorGradPNG = "imgs_out/sobel_horiz_grad.png";
+
+		printf("Converted horizontal gradient: ");
+		printf("[%s] \n", fileHorGradPNG);
+
+		//Convert the output file to PNG
+		const char * pngConvertHor[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_h_grad, spaceDiv, fileHorGradPNG};
+		const char * strGradToPNG = arrayStringsToString(pngConvertHor, 8, STRING_BUFFER_SIZE);
+		system(strGradToPNG);
 
 
+		//####Compute the VERTICAL GRADIENT#####
+	    int sobel_v[] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
 
+		int * dev_sobel_v;
 
+		//allocate memory for device vertical kernel
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_v , SOBEL_OP_SIZE*sizeof(int)));
 
+		//copy the content of the host vertical kernel to the device vertical kernel
+		HANDLE_ERROR (cudaMemcpy (dev_sobel_v , sobel_v , SOBEL_OP_SIZE*sizeof(int) , cudaMemcpyHostToDevice));
+
+		//allocate memory for the resulting vertical gradient on the device
+		byte * dev_sobel_v_res;
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_v_res , gray_size*sizeof(byte)));
+
+		//perform vertical gradient calculation for every pixel
+		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
+
+		//copy the resulting vertical array from device back to host
+		byte sobel_v_res[gray_size];
+		HANDLE_ERROR (cudaMemcpy(sobel_v_res , dev_sobel_h_res , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
+
+		//free-up the memory for the vectors allocated
+		cudaFree(dev_sobel_v);
+		cudaFree(dev_sobel_v_res);
+
+		const char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
+
+		//Output the vertical axis' gradient calculated
+		writeFile(file_out_v_grad, sobel_v_res, gray_size);
+
+		printf("Output vertical gradient to [%s] \n", file_out_v_grad);
+		const char * fileVerGradPNG = "imgs_out/sobel_vert_grad.png";
+
+		const char * pngConvertVer[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_v_grad, spaceDiv, fileVerGradPNG};
+
+		strGradToPNG = arrayStringsToString(pngConvertVer, 8, STRING_BUFFER_SIZE);
+		system(strGradToPNG);
 
 
 
