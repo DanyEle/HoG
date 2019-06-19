@@ -27,7 +27,6 @@ int main( int argc, char** argv )
 		return -2;
 	 }
 
-
 	bool intermediate_output = false;
 
 	//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
