@@ -46,6 +46,12 @@ char * arrayStringsToString(const char ** strings, int stringsAmount, int buffer
 //argv[2] = input image name
 int main( int argc, char** argv )
 {
+	 if(argc < 3)
+	 {
+		printf("You did not provide any input image name and thread. Usage: output [amount_threads] [input_image_name] and retry. \n");
+		return -2;
+	 }
+
 	  int amountThreads = atoi(argv[1]);
 	  char const * fileInputName = argv[2];
 

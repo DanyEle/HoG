@@ -21,6 +21,13 @@ typedef unsigned char byte;
 
 int main( int argc, char** argv )
 {
+	 if(argc < 2)
+	 {
+		printf("You did not provide any input image name and thread. Usage: output [input_image_name] . \n");
+		return -2;
+	 }
+
+
 	bool intermediate_output = false;
 
 	//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
