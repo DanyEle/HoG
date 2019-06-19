@@ -30,13 +30,19 @@ static void HandleError( cudaError_t err, const char *file, int line )
 
 __global__ void contour(byte *dev_sobel_h, byte *dev_sobel_v, int gray_size, byte *dev_contour_img)
 {
-	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_y = threadIdx.x + blockIdx.x * blockDim.x;
+
+	int tid = tid_x + tid_y;
+
 
     // Performed on every pixel in parallel to calculate the contour image
     while(tid < gray_size)
     {
         dev_contour_img[tid] = (byte) sqrt(pow(dev_sobel_h[tid], 2) + pow(dev_sobel_v[tid], 2));
-    	tid += blockDim.x * gridDim.x;
+
+    	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
+
     }
 }
 
@@ -83,8 +89,11 @@ __global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op,
     // Temporary memory for each pixel operation
     byte op_mem[SOBEL_OP_SIZE];
     memset(op_mem, 0, SOBEL_OP_SIZE);
+    int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_y = threadIdx.x + blockIdx.x * blockDim.x;
 
-	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+	//simple linearization
+	int tid = tid_x + tid_y;
 
     // Make convolution for every pixel. Each pixel --> one thread.
     //for(int i=0; i < buffer_size; i++)
@@ -100,7 +109,7 @@ __global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op,
          * value was to be stored because the next time it is used the value is
          * squared.
          */
-    	tid += blockDim.x * gridDim.x;
+    	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
     }
 }
 
@@ -116,7 +125,12 @@ __global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op,
 __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_b_vec, byte * dev_gray_image, int gray_size)
 {
     //Get the id of thread within a block
-	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
+
+	//simple linearization
+	int tid = tid_x + tid_y;
+
 
 	//pixel-wise operation on the R,G,B vectors
 	while(tid < gray_size)
@@ -128,7 +142,8 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 
 		//Formula accordidev_ng to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
 		dev_gray_image[tid] = 0.30 * p_r + 0.59*p_g + 0.11*p_b;
-    	tid += blockDim.x * gridDim.x;
+    	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
+
 	}
 }
 
@@ -140,6 +155,13 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 
 int main ( int argc, char** argv )
 {
+		if(argc < 2)
+		{
+			printf("You did not provide any input image name. Please, provide an input image name and retry. \n");
+			return -2;
+		}
+
+
 		bool intermediate_output = false;
 
 		//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
@@ -260,8 +282,12 @@ int main ( int argc, char** argv )
    	    byte * dev_sobel_h_res;
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h_res , gray_size*sizeof(byte)));
 
+		printf("Before kernel \n");
+
 		//perform horizontal gradient calculation for every pixel
 		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
+
+		printf("Afrer kernel");
 
 		//copy the resulting horizontal array from device to host
 		byte sobel_h_res[gray_size];
