@@ -19,9 +19,6 @@ typedef unsigned char byte;
 #define STRING_BUFFER_SIZE 1024
 
 
-
-
-
 int main( int argc, char** argv )
 {
 	bool intermediate_output = false;
@@ -29,8 +26,9 @@ int main( int argc, char** argv )
 	//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
 
 	//Specify the input image. Formats supported: png, jpg, GIF.
-	char * fileInputName = "imgs_in/nonna.jpg";
+	//char * fileInputName = "imgs_in/nonna.jpg";
 
+	char * fileInputName = argv[1];
 	char * spaceDiv = " ";
 	char * fileOutputRGB = "imgs_out/image.rgb";
 	char *pngStrings[4] = {"convert ", fileInputName, spaceDiv, fileOutputRGB};
@@ -43,7 +41,7 @@ int main( int argc, char** argv )
 
 	if(status_conversion != 0)
 	{
-		printf("Conversion of input PNG image to RGB was not successful. Program aborting.");
+		printf("ERROR! Conversion of input PNG image to RGB was not successful. Program aborting.\n");
 		return -1;
 	}
 	printf("Converted input image to RGB [%s] \n", fileOutputRGB);
@@ -54,7 +52,7 @@ int main( int argc, char** argv )
 
 	getImageSize(fileInputName, &width, &height);
 
-	printf("Size of the loaded image : width=%d height=%d \n", width, height);
+	printf("Size of the loaded image: width=%d height=%d \n", width, height);
 
 	//Three dimensions because the input image is in colored format(R,G,B)
 	int rgb_size = width * height * 3;
@@ -156,6 +154,7 @@ int main( int argc, char** argv )
 
     printf("Converted countour: [%s] \n", file_sobel_png);
 
+	printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
     return 0;
 }
 
