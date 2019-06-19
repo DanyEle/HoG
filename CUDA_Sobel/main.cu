@@ -31,9 +31,9 @@ static void HandleError( cudaError_t err, const char *file, int line )
 __global__ void contour(byte *dev_sobel_h, byte *dev_sobel_v, int gray_size, byte *dev_contour_img)
 {
 	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
-	int tid_y = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
-	int tid = tid_x + tid_y;
+	int tid = abs(tid_x - tid_y);
 
 
     // Performed on every pixel in parallel to calculate the contour image
@@ -90,13 +90,12 @@ __global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op,
     byte op_mem[SOBEL_OP_SIZE];
     memset(op_mem, 0, SOBEL_OP_SIZE);
     int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
-	int tid_y = threadIdx.x + blockIdx.x * blockDim.x;
+	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
 	//simple linearization
-	int tid = tid_x + tid_y;
+	int tid = abs(tid_x - tid_y);
 
     // Make convolution for every pixel. Each pixel --> one thread.
-    //for(int i=0; i < buffer_size; i++)
     while(tid < buffer_size)
     {
         // Make op_mem
@@ -129,8 +128,7 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
 	//simple linearization
-	int tid = tid_x + tid_y;
-
+	int tid = abs(tid_x - tid_y);
 
 	//pixel-wise operation on the R,G,B vectors
 	while(tid < gray_size)
@@ -146,11 +144,6 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 
 	}
 }
-
-
-
-
-
 
 
 int main ( int argc, char** argv )
