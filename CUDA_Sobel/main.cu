@@ -39,7 +39,7 @@ __global__ void contour(byte *dev_sobel_h, byte *dev_sobel_v, int gray_size, byt
     // Performed on every pixel in parallel to calculate the contour image
     while(tid < gray_size)
     {
-        dev_contour_img[tid] = (byte) sqrt(pow(dev_sobel_h[tid], 2) + pow(dev_sobel_v[tid], 2));
+        dev_contour_img[tid] = (byte) sqrt(pow((double)dev_sobel_h[tid], 2.0) + pow((double)dev_sobel_v[tid], 2.0));
 
     	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
 
@@ -127,7 +127,7 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
-	//simple linearization
+	//simple linearization of 2D space
 	int tid = abs(tid_x - tid_y);
 
 	//pixel-wise operation on the R,G,B vectors
@@ -275,15 +275,13 @@ int main ( int argc, char** argv )
    	    byte * dev_sobel_h_res;
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h_res , gray_size*sizeof(byte)));
 
-		printf("Before kernel \n");
-
 		//perform horizontal gradient calculation for every pixel
 		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
 
-		printf("Afrer kernel");
-
 		//copy the resulting horizontal array from device to host
-		byte sobel_h_res[gray_size];
+		//fixed segmentation fault when processing large images
+		byte* sobel_h_res = (byte*) malloc(gray_size * sizeof(byte));
+
 	    HANDLE_ERROR (cudaMemcpy(sobel_h_res , dev_sobel_h_res , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
 
 	    //free-up the memory for the vectors allocated
@@ -327,7 +325,9 @@ int main ( int argc, char** argv )
 		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
 
 		//copy the resulting vertical array from device back to host
-		byte sobel_v_res[gray_size];
+		//fixed segmentation fault issue with big images
+		byte* sobel_v_res = (byte*) malloc(gray_size * sizeof(byte));
+
 		HANDLE_ERROR (cudaMemcpy(sobel_v_res , dev_sobel_h_res , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
 
 		//free-up the memory for the vectors allocated
