@@ -166,4 +166,3 @@ void getDimensionFromRGBVec(int dimension, byte* rgbImage,  byte** dim_vector, i
 	    }
 }
 
-

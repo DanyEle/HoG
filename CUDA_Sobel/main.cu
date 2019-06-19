@@ -1,13 +1,18 @@
 #include <stdio.h>
+
 #include "file_operations.c"
+
 #define STRING_BUFFER_SIZE 1024
-#define SOBEL_OP_SIZE 3
+
+#define SOBEL_OP_SIZE 9
 #include "string.h"
 #include "stdlib.h"
 #include "math.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+
+
 
 
 #define HANDLE_ERROR( err ) ( HandleError( err, __FILE__, __LINE__ ) )
@@ -79,11 +84,11 @@ __device__ void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, 
 
 
 
-__global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op, byte *dev_res, byte * dev_op_mem)
+__global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op, byte *dev_res)
 {
     // Temporary memory for each pixel operation
-    //byte op_mem[SOBEL_OP_SIZE];
-    //memset(op_mem, 0, SOBEL_OP_SIZE);
+    byte op_mem[SOBEL_OP_SIZE];
+    memset(op_mem, 0, SOBEL_OP_SIZE);
     int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -93,10 +98,10 @@ __global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op,
     // Make convolution for every pixel. Each pixel --> one thread.
     while(tid < buffer_size)
     {
-        // Make op_mem on the device itself
-        makeOpMem(buffer, buffer_size, width, tid, dev_op_mem);
+        // Make op_mem
+        makeOpMem(buffer, buffer_size, width, tid, op_mem);
 
-        dev_res[tid] = (byte) abs(convolution(dev_op_mem, dev_op, SOBEL_OP_SIZE));
+        dev_res[tid] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
         /*
          * The abs function is used in here to avoid storing negative numbers
          * in a byte data type array. It wouldn't make a different if the negative
@@ -136,6 +141,7 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 		//Formula accordidev_ng to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
 		dev_gray_image[tid] = 0.30 * p_r + 0.59*p_g + 0.11*p_b;
     	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
+
 	}
 }
 
@@ -269,21 +275,12 @@ int main ( int argc, char** argv )
    	    byte * dev_sobel_h_res;
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h_res , gray_size*sizeof(byte)));
 
-		//allocate memory for the dev_op_mem
-		byte * dev_op_mem;
-		HANDLE_ERROR ( cudaMalloc((void **)&dev_op_mem , SOBEL_OP_SIZE*sizeof(byte)));
-
-		//populate the op_mem
-		byte op_mem[SOBEL_OP_SIZE];
-		memset(op_mem, 0, SOBEL_OP_SIZE);
-
-		//copy the host memset to the device memset
-	    HANDLE_ERROR (cudaMemcpy (dev_op_mem, op_mem , SOBEL_OP_SIZE*sizeof(byte) , cudaMemcpyHostToDevice));
+		printf("Before kernel \n");
 
 		//perform horizontal gradient calculation for every pixel
-		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res, dev_op_mem);
+		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
 
-		printf("After kernel");
+		printf("Afrer kernel");
 
 		//copy the resulting horizontal array from device to host
 		byte sobel_h_res[gray_size];
@@ -313,20 +310,21 @@ int main ( int argc, char** argv )
 
 		//####Compute the VERTICAL GRADIENT#####
 	    int sobel_v[] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
+
 		int * dev_sobel_v;
 
 		//allocate memory for device vertical kernel
-		HANDLE_ERROR (cudaMalloc((void **)&dev_sobel_v , SOBEL_OP_SIZE*sizeof(int)));
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_v , SOBEL_OP_SIZE*sizeof(int)));
 
 		//copy the content of the host vertical kernel to the device vertical kernel
 		HANDLE_ERROR (cudaMemcpy (dev_sobel_v , sobel_v , SOBEL_OP_SIZE*sizeof(int) , cudaMemcpyHostToDevice));
 
 		//allocate memory for the resulting vertical gradient on the device
 		byte * dev_sobel_v_res;
-		HANDLE_ERROR (cudaMalloc((void **)&dev_sobel_v_res , gray_size*sizeof(byte)));
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_v_res , gray_size*sizeof(byte)));
 
 		//perform vertical gradient calculation for every pixel
-		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res, dev_op_mem);
+		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
 
 		//copy the resulting vertical array from device back to host
 		byte sobel_v_res[gray_size];
@@ -355,7 +353,7 @@ int main ( int argc, char** argv )
 
 		//allocate device memory for the final vector containing the countour
 		byte * dev_countour_img;
-		HANDLE_ERROR (cudaMalloc((void **)&dev_countour_img , gray_size*sizeof(byte)));
+		HANDLE_ERROR ( cudaMalloc((void **)&dev_countour_img , gray_size*sizeof(byte)));
 
 		contour <<< width, height>>> (dev_sobel_h_res, dev_sobel_v_res, gray_size, dev_countour_img);
 
