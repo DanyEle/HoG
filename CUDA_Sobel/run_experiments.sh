@@ -1,3 +1,4 @@
+#!/bin/bash
 
 INPUT_IMG=$1
 
@@ -6,7 +7,6 @@ if [ "$1" == "" ]; then
     exit
 fi
 
-#!/bin/bash
 for i in {1..10}
 do
  # echo "------------------"

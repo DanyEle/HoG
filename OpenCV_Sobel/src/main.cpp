@@ -185,6 +185,12 @@ int main( int argc, char** argv )
 
 	  printf("%f \n", total_time_compute);
 
+	  //overall i/o + compute phase
+
+	  double overall_total_time = total_time_i_o + total_time_compute;
+
+	  printf("%f \n", overall_total_time);
+
 	  return 0;
 }
 

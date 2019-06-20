@@ -230,7 +230,12 @@ int main ( int argc, char** argv )
 		struct timeval start_alloc_rgb, end_alloc_rgb;
 		gettimeofday(&start_alloc_rgb, NULL);
 
+
+		struct timeval start_first_cuda_malloc, end_first_cuda_malloc;
+
+		gettimeofday(&start_first_cuda_malloc, NULL);
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_r_vec , gray_size*sizeof(byte)));
+	    gettimeofday(&end_first_cuda_malloc, NULL);
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_g_vec, gray_size*sizeof(byte)));
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_b_vec, gray_size*sizeof(byte)));
 
@@ -248,6 +253,7 @@ int main ( int argc, char** argv )
 
 	    //actually run the kernel to convert input RGB file to gray-scale
 	    rgb_img_to_gray <<< width, height>>> (dev_r_vec, dev_g_vec, dev_b_vec, dev_gray_image, gray_size) ;
+	    cudaDeviceSynchronize();
 
 	    //TODO: use malloc instead of [gray_size]
 	    //byte gray_image[gray_size];
@@ -330,6 +336,8 @@ int main ( int argc, char** argv )
 		gettimeofday(&comp_start_horiz_grad, NULL);
 		//perform horizontal gradient calculation for every pixel
 		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
+	    cudaDeviceSynchronize();
+
 
 		//fixed segmentation fault when processing large images
 		byte* sobel_h_res = (byte*) malloc(gray_size * sizeof(byte));
@@ -396,6 +404,8 @@ int main ( int argc, char** argv )
 
 		//perform vertical gradient calculation for every pixel
 		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
+	    cudaDeviceSynchronize();
+
 
 		//copy the resulting vertical array from device back to host
 		//fixed segmentation fault issue with big images
@@ -452,6 +462,8 @@ int main ( int argc, char** argv )
 
 		gettimeofday(&comp_start_countour_merge, NULL);
 		contour <<< width, height>>> (dev_sobel_h_res, dev_sobel_v_res, gray_size, dev_countour_img);
+	    cudaDeviceSynchronize();
+
 		//copy the resulting countour image from device back to host
 		//byte countour_img[gray_size];
 		byte * countour_img = (byte *) malloc(gray_size * sizeof(byte));
@@ -467,7 +479,7 @@ int main ( int argc, char** argv )
 		struct timeval start_free_countour, end_free_countour;
 
 		gettimeofday(&start_free_countour, NULL);
-		//free-up all the memory from the allocate vectors
+		//free-up all the memory from the allocated vectors
 	    cudaFree(dev_sobel_h_res);
 	    cudaFree(dev_sobel_v_res);
 	    cudaFree(dev_countour_img);
@@ -549,7 +561,6 @@ int main ( int argc, char** argv )
 		//printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp);
 		printf("%f \n", total_time_gpu_comp);
 
-
 		//##Input/Output over the disk (image loading and final image writing)##
 		double i_o_time_load_img = compute_elapsed_time(i_o_start_load_img, i_o_end_load_img);
 		double i_o_time_write_gray_countour = compute_elapsed_time(i_o_start_write_gray_countour, i_o_end_write_gray_countour);
@@ -557,16 +568,20 @@ int main ( int argc, char** argv )
 
 		double total_time_i_o = i_o_time_load_img + i_o_time_write_gray_countour + i_o_time_write_img;
 
-		printf("%f \n", total_time_i_o);
 		//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o);
+		printf("%f \n", total_time_i_o);
 
 		//##Overall time spent in the program
 		double overall_total_time = total_time_gpu_comp + total_time_gpu_mem + total_time_i_o;
+
 		//printf("Overall time spent in program [%f] ms \n", overall_total_time);
 		printf("%f \n", overall_total_time);
+
+
+		double time_first_cuda_malloc = compute_elapsed_time(start_first_cuda_malloc, end_first_cuda_malloc);
+
+		printf("First cuda malloc takes [%f] \n", time_first_cuda_malloc);
 
 	    return 0;
 
 }
-
-//Don't forget to clean up the device memory!!

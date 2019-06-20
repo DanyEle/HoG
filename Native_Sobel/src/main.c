@@ -201,6 +201,7 @@ int main( int argc, char** argv )
 
 	double total_time_i_o = i_o_time_load_img + i_o_time_write_gray_img + i_o_time_write_png_img;
 
+	//##Computation time
 	//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o);
 	printf("%f \n", total_time_i_o);
 
@@ -212,6 +213,11 @@ int main( int argc, char** argv )
 
 	printf("%f \n", total_time_comp);
 
+	//##Overall total time
+
+	double overall_total_time = total_time_comp + total_time_i_o;
+
+	printf("%f \n", overall_total_time);
 
     return 0;
 }
