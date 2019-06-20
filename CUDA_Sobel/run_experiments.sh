@@ -9,7 +9,7 @@ fi
 #!/bin/bash
 for i in {1..10}
 do
-  echo "------------------"
-  echo "Experiment $i"
+ # echo "------------------"
+ # echo "Experiment $i"
   ./Debug/CUDA_Sobel $INPUT_IMG
 done

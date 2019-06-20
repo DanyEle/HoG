@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <chrono>
 
 
 #include "functions.c"
@@ -173,7 +172,8 @@ int main ( int argc, char** argv )
 		const char *pngStrings[4] = {"convert ", fileInputName, spaceDiv, fileOutputRGB};
 		const char * strPngToRGB = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
 
-		printf("Loading input image [%s] \n", fileInputName);
+		//Put back
+		//printf("Loading input image [%s] \n", fileInputName);
 
 		gettimeofday(&comp_end_load_img, NULL);
 
@@ -191,7 +191,8 @@ int main ( int argc, char** argv )
 			printf("ERROR! Conversion of input PNG image to RGB was not successful. Program aborting.\n");
 			return -1;
 		}
-		printf("Converted input image to RGB [%s] \n", fileOutputRGB);
+		//Put back
+		//printf("Converted input image to RGB [%s] \n", fileOutputRGB);
 
 		//get the height and width of the input image
 		int width = 0;
@@ -199,11 +200,13 @@ int main ( int argc, char** argv )
 
 		getImageSize(fileInputName, &width, &height);
 
-		printf("Size of the loaded image: width=%d height=%d \n", width, height);
+		//Put back
+		//printf("Size of the loaded image: width=%d height=%d \n", width, height);
 
 		//Three dimensions because the input image is in colored format(R,G,B)
 		int rgb_size = width * height * 3;
-		printf("Total amount of pixels in RGB input image is [%d] \n", rgb_size);
+		//Put back
+		//printf("Total amount of pixels in RGB input image is [%d] \n", rgb_size);
 		//Used as a buffer for all pixels of the image
 		byte * rgb_image;
 
@@ -486,8 +489,8 @@ int main ( int argc, char** argv )
 		gettimeofday(&i_o_start_write_gray_countour, NULL);
 		writeFile(file_sobel_out, countour_img, gray_size);
 		gettimeofday(&i_o_end_write_gray_countour, NULL);
-
-		printf("Output countour to [%s] \n", file_sobel_out);
+		//Put back
+		//printf("Output countour to [%s] \n", file_sobel_out);
 
 		//actually execute the conversion from PNG to RGB, as that format is required for the program
 		struct timeval i_o_start_write_img, i_o_end_write_img;
@@ -495,8 +498,9 @@ int main ( int argc, char** argv )
 		system(strSobelToPNG);
 		gettimeofday(&i_o_end_write_img, NULL);
 
-		printf("Converted countour: [%s] \n", file_sobel_png);
-		printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
+		//Put back
+		//printf("Converted countour: [%s] \n", file_sobel_png);
+		//printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
 		//printf("file loading and writing time: [%d] ms", write_load_total_time);
 
 
@@ -522,7 +526,9 @@ int main ( int argc, char** argv )
 		double total_time_gpu_mem = time_alloc_rgb + time_free_rgb + time_copy_gray + time_alloc_h_vec + time_copy_h_vec + time_free_h_vec +
 							  time_alloc_v_vec + time_copy_v_vec + time_free_v_vec + time_alloc_countour + time_copy_countour + time_free_countour;
 
-		printf("Time spent on GPU memory operations: [%f] ms\n", total_time_gpu_mem);
+		//printf("Time spent on GPU memory operations: [%f] ms\n", total_time_gpu_mem); //GPU memory operatio
+		printf("%f \n", total_time_gpu_mem); //GPU memory operatio
+
 
 		//##Actual GPU computation##
 		double comp_time_load_img = compute_elapsed_time(comp_start_load_img, comp_end_load_img);
@@ -540,7 +546,9 @@ int main ( int argc, char** argv )
 		double total_time_gpu_comp = comp_time_load_img + comp_time_convert_img + comp_time_rgb_to_gray + comp_time_str_alloc + comp_time_h_alloc +
 						comp_time_h_grad + comp_time_v_alloc + comp_time_v_grad + comp_time_count_alloc + comp_time_count_merge + comp_time_count_str_alloc;
 
-		printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp);
+		//printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp);
+		printf("%f \n", total_time_gpu_comp);
+
 
 		//##Input/Output over the disk (image loading and final image writing)##
 		double i_o_time_load_img = compute_elapsed_time(i_o_start_load_img, i_o_end_load_img);
@@ -549,12 +557,13 @@ int main ( int argc, char** argv )
 
 		double total_time_i_o = i_o_time_load_img + i_o_time_write_gray_countour + i_o_time_write_img;
 
-		printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o);
+		printf("%f \n", total_time_i_o);
+		//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o);
 
 		//##Overall time spent in the program
 		double overall_total_time = total_time_gpu_comp + total_time_gpu_mem + total_time_i_o;
-
-		printf("Overall time spent in program [%f] ms \n", overall_total_time);
+		//printf("Overall time spent in program [%f] ms \n", overall_total_time);
+		printf("%f \n", overall_total_time);
 
 	    return 0;
 
