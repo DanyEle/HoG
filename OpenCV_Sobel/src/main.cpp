@@ -11,8 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
-#include <time.h>
-#include <chrono>
+#include <sys/time.h>
 
 
 #define STRING_BUFFER_SIZE 1024
@@ -20,6 +19,9 @@
 
 using namespace cv;
 using namespace std;
+
+
+
 
 
 //Input: strings: an array containing strings
@@ -42,21 +44,37 @@ char * arrayStringsToString(const char ** strings, int stringsAmount, int buffer
 	return strConvert;
 }
 
-//argv[1] = amount of threads
-//argv[2] = input image name
+
+double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
+{
+	//time in microseconds (us)
+	double time_elapsed_us =  (double) (time_end.tv_usec - time_begin.tv_usec) / 1000000 +  (double) (time_end.tv_sec - time_begin.tv_sec);
+
+	//return time in milliseconds (ms)
+	double time_elapsed_ms = time_elapsed_us * 1000;
+
+	return time_elapsed_ms;
+}
+
+
+//argv[1] = input image name
 int main( int argc, char** argv )
 {
-	 if(argc < 3)
+	 struct timeval comp_start_init_vars, comp_end_init_vars;
+
+	 gettimeofday(&comp_start_init_vars, NULL);
+
+	 if(argc < 2) //was 3
 	 {
-		printf("You did not provide any input image name and thread. Usage: output [amount_threads] [input_image_name] and retry. \n");
+		printf("You did not provide any input image. Please, pass an input image and retry. \n");
 		return -2;
 	 }
 
-	  int amountThreads = atoi(argv[1]);
-	  char const * fileInputName = argv[2];
+	  //int amountThreads = atoi(argv[1]);
+	  char const * fileInputName = argv[1];
 
 	  //set the amount of threads for testing the performance while computing the sobel operator
-	  cv::setNumThreads(amountThreads);
+	  //cv::setNumThreads(amountThreads);
 
 	  Mat src, src_gray;
 	  Mat grad;
@@ -64,9 +82,18 @@ int main( int argc, char** argv )
 	  int delta = 0;
 	  int ddepth = CV_16S;
 
+	  gettimeofday(&comp_end_init_vars, NULL);
+
+	  struct timeval i_o_start_read_img, i_o_end_read_img;
+
+	  gettimeofday(&i_o_start_read_img, NULL);
 	  //char const * inputFileName = "imgs_in/lena.png";
 	  ///1. Step - load an image from disk
 	  src = imread(fileInputName);
+	  gettimeofday(&i_o_end_read_img, NULL);
+
+	  struct timeval comp_start_str_sobel, comp_end_str_sobel;
+	  gettimeofday(&comp_start_str_sobel, NULL);
 
 	  //if no picture passed as input argument, then just terminate already
 	  if( !src.data )
@@ -76,18 +103,27 @@ int main( int argc, char** argv )
 	  const char * fileOutputRGB = "imgs_out/image.rgb";
 	  const char *pngStrings[4] = {"convert ", fileInputName, spaceDiv, fileOutputRGB};
 	  const char * strPngToRGB = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
+	  //printf("Loading input image [%s] \n", fileInputName);
+	  gettimeofday(&comp_end_str_sobel, NULL);
 
-	  printf("Loading input image [%s] \n", fileInputName);
+	  struct timeval i_o_start_conv_rgb_png, i_o_end_conv_rgb_png;
 
+	  gettimeofday(&i_o_start_conv_rgb_png, NULL);
 	  //actually execute the conversion from PNG to RGB, as that format is required for the program
 	  int status_conversion = system(strPngToRGB);
+	  gettimeofday(&i_o_end_conv_rgb_png, NULL);
+
+
+	  struct timeval comp_start_sobel_filter, comp_end_sobel_filter;
+
+	  gettimeofday(&comp_start_sobel_filter, NULL);
 
 	  if(status_conversion != 0)
 	  {
 			printf("ERROR! Conversion of input PNG image to RGB was not successful. Program aborting.\n");
 			return -1;
 	  }
-	  printf("Converted input image to RGB [%s] \n", fileOutputRGB);
+	  //printf("Converted input image to RGB [%s] \n", fileOutputRGB);
 
 	  //2. Step - Apply a gaussian blur filter to reduce the noise, using kernel size = 3
 	  //GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
@@ -118,9 +154,36 @@ int main( int argc, char** argv )
 	  //imshow( window_name, grad );
 
 	  const char * file_sobel_out = "imgs_out/sobel_countour.png";
-	  printf("Converted countour: [%s] \n", file_sobel_out);
+	  //printf("Converted countour: [%s] \n", file_sobel_out);
+	  gettimeofday(&comp_end_sobel_filter, NULL);
+
+	  struct timeval i_o_start_img_write, i_o_end_img_write;
+
+	  gettimeofday(&i_o_start_img_write, NULL);
 	  imwrite(file_sobel_out, grad);
-	  printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
+	  //printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
+	  gettimeofday(&i_o_end_img_write, NULL);
+
+
+	  //7. Step - compute the time elapsed in the 'computation' phase and in the 'i/o' phase
+
+	  //i/o phase
+	  double i_o_time_read_img = compute_elapsed_time(i_o_start_read_img, i_o_end_read_img);
+	  double i_o_time_conv_img = compute_elapsed_time(i_o_start_conv_rgb_png, i_o_end_conv_rgb_png);
+	  double i_o_time_write_img = compute_elapsed_time(i_o_start_img_write, i_o_end_img_write);
+
+	  double total_time_i_o = i_o_time_read_img + i_o_time_conv_img + i_o_time_write_img;
+
+	  printf("%f \n", total_time_i_o);
+
+	  //compute phase
+	  double comp_time_init_vars = compute_elapsed_time(comp_start_init_vars, comp_end_init_vars);
+	  double comp_time_str_sobel = compute_elapsed_time(comp_start_str_sobel, comp_end_str_sobel);
+	  double comp_time_sobel_filter = compute_elapsed_time(comp_start_sobel_filter, comp_end_sobel_filter);
+
+	  double total_time_compute = comp_time_init_vars + comp_time_str_sobel + comp_time_sobel_filter;
+
+	  printf("%f \n", total_time_compute);
 
 	  return 0;
 }

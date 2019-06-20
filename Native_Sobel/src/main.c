@@ -193,7 +193,7 @@ int main( int argc, char** argv )
 	//printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
 
 	//#############5. Step - Display the elapsed time in the different parts of the code
-/*
+
 	//##I/O time
 	double i_o_time_load_img = compute_elapsed_time(i_o_start_load_img, i_o_end_load_img);
 	double i_o_time_write_gray_img = compute_elapsed_time(i_o_start_write_gray_image, i_o_end_write_gray_image);
@@ -211,8 +211,6 @@ int main( int argc, char** argv )
 	double total_time_comp = comp_time_load_img + comp_time_img_process + comp_time_str_process;
 
 	printf("%f \n", total_time_comp);
-
-	*/
 
 
     return 0;
