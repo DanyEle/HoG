@@ -1,7 +1,7 @@
 //Credits for this file go to: https://github.com/petermlm/SobelFilter
 
 
-#include "file_operations.h"
+#include "image_operations.h"
 #include "string.h"
 #include "stdlib.h"
 #include "math.h"
