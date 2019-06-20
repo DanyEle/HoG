@@ -148,5 +148,16 @@
     /usr/include/texture_indirect_functions.h \
     /usr/include/surface_indirect_functions.h \
     /usr/include/device_launch_parameters.h \
+    /usr/include/c++/6/chrono \
+    /usr/include/c++/6/ratio \
+    /usr/include/c++/6/cstdint \
+    /usr/lib/gcc/x86_64-linux-gnu/6/include/stdint.h \
+    /usr/include/stdint.h \
+    /usr/include/x86_64-linux-gnu/bits/wchar.h \
+    /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+    /usr/include/c++/6/limits \
+    /usr/include/c++/6/ctime \
+    /usr/include/c++/6/bits/parse_numbers.h \
     ../file_operations.c \
-    ../file_operations.h
+    ../file_operations.h \
+    /usr/include/x86_64-linux-gnu/sys/time.h

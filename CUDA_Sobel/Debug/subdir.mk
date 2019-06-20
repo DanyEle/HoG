@@ -7,17 +7,17 @@ CU_SRCS += \
 ../main.cu 
 
 C_SRCS += \
-../file_operations.c 
+../functions.c 
 
 OBJS += \
-./file_operations.o \
+./functions.o \
 ./main.o 
 
 CU_DEPS += \
 ./main.d 
 
 C_DEPS += \
-./file_operations.d 
+./functions.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
