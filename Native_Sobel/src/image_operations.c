@@ -103,7 +103,8 @@ void itConv(byte *buffer, int buffer_size, int width, int *op, byte **res)
 
 
 
-void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img) {
+void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img)
+{
     // Allocate memory for contour_img
     *contour_img = malloc(sizeof(byte) * gray_size);
 
@@ -112,4 +113,15 @@ void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img) {
     {
         (*contour_img)[i] = (byte) sqrt(pow(sobel_h[i], 2) + pow(sobel_v[i], 2));
     }
+}
+
+double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
+{
+	//time in microseconds (us)
+	double time_elapsed_us =  (double) (time_end.tv_usec - time_begin.tv_usec) / 1000000 +  (double) (time_end.tv_sec - time_begin.tv_sec);
+
+	//return time in milliseconds (ms)
+	double time_elapsed_ms = time_elapsed_us * 1000;
+
+	return time_elapsed_ms;
 }

@@ -1,0 +1,36 @@
+I/O operations
+i_o_start_load_img
+i_o_start_write_gray_countour
+i_o_start_write_img
+
+
+
+GPU memory movements (cudaMalloc, cudaMemCpy, cudaFree)
+start_alloc_rgb
+start_free_rgb
+start_gray_vec_copy
+start_h_vec_alloc
+start_h_vec_copy
+start_h_vec_free
+start_v_vec_alloc
+start_v_vec_copy
+start_v_vec_free
+start_countour_alloc
+start_countour_copy
+start_free_countour
+
+
+
+Computation
+
+comp_start_load_img
+comp_start_img_conv
+comp_start_rgb_to_gray
+comp_start_str_alloc
+comp_start_alloc_h_vec
+comp_start_horiz_grad
+comp_start_alloc_v_grad
+comp_start_vert_grad
+comp_start_countour_alloc
+comp_start_countour_merge
+comp_start_countour_str_alloc
