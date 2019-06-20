@@ -247,7 +247,9 @@ int main ( int argc, char** argv )
 	    rgb_img_to_gray <<< width, height>>> (dev_r_vec, dev_g_vec, dev_b_vec, dev_gray_image, gray_size) ;
 
 	    //TODO: use malloc instead of [gray_size]
-	    byte gray_image[gray_size];
+	    //byte gray_image[gray_size];
+		byte * gray_image = (byte *) malloc(gray_size * sizeof(byte));
+
 
 		gettimeofday(&comp_end_rgb_to_gray, NULL);
 
@@ -332,7 +334,6 @@ int main ( int argc, char** argv )
 		gettimeofday(&comp_end_horiz_grad, NULL);
 
 		//copy the resulting horizontal array from device to host
-
 		struct timeval start_h_vec_copy, end_h_vec_copy;
 
 		gettimeofday(&start_h_vec_copy, NULL);
@@ -436,7 +437,6 @@ int main ( int argc, char** argv )
 		//allocate device memory for the final vector containing the countour
 
 		byte * dev_countour_img;
-
 		gettimeofday(&comp_end_countour_alloc, NULL);
 
 		struct timeval start_countour_alloc, end_countour_alloc;
@@ -450,7 +450,9 @@ int main ( int argc, char** argv )
 		gettimeofday(&comp_start_countour_merge, NULL);
 		contour <<< width, height>>> (dev_sobel_h_res, dev_sobel_v_res, gray_size, dev_countour_img);
 		//copy the resulting countour image from device back to host
-		byte countour_img[gray_size];
+		//byte countour_img[gray_size];
+		byte * countour_img = (byte *) malloc(gray_size * sizeof(byte));
+
 		gettimeofday(&comp_end_countour_merge, NULL);
 
 		struct timeval start_countour_copy, end_countour_copy;
