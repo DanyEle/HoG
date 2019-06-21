@@ -5,7 +5,12 @@
 
 #define STRING_BUFFER_SIZE 1024
 
+//false --> No vertical gradient and horizontal gradient are output
+//true --> Vertical gradient and horizontal gradient are outout
+#define INTERMEDIATE_OUTPUT false
 #define SOBEL_OP_SIZE 9
+
+
 #include "string.h"
 #include "stdlib.h"
 #include "math.h"
@@ -13,6 +18,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
+
+
 
 
 
@@ -80,10 +87,6 @@ __device__ void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, 
 }
 
 
-
-
-
-
 __global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op, byte *dev_res)
 {
     // Temporary memory for each pixel operation
@@ -146,9 +149,13 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 }
 
 
-
 int main ( int argc, char** argv )
 {
+		//dummy CUDA malloc
+		byte * dummy_array;
+
+		HANDLE_ERROR ( cudaMalloc((void **)&dummy_array , 1*sizeof(byte)));
+
 		//actual computation
 		struct timeval comp_start_load_img, comp_end_load_img;
 
@@ -159,7 +166,6 @@ int main ( int argc, char** argv )
 			return -2;
 		}
 
-		bool intermediate_output = false;
 
 		//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
 
@@ -280,7 +286,7 @@ int main ( int argc, char** argv )
 
 		gettimeofday(&comp_end_str_alloc, NULL);
 
-		if(intermediate_output)
+		if(INTERMEDIATE_OUTPUT)
 		{
 			 //let's see what's in there, shall we?
 			const char * file_gray = "imgs_out/img_gray.gray";
@@ -360,7 +366,7 @@ int main ( int argc, char** argv )
 
 	    const char * strGradToPNG;
 
-	    if(intermediate_output)
+	    if(INTERMEDIATE_OUTPUT)
 	    {
 			//output the horizontal axis-gradient to a file
 			const char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
@@ -428,7 +434,7 @@ int main ( int argc, char** argv )
 		struct timeval comp_start_countour_alloc, comp_end_countour_alloc;
 		gettimeofday(&comp_start_countour_alloc, NULL);
 
-		if(intermediate_output)
+		if(INTERMEDIATE_OUTPUT)
 		{
 			const char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
 
@@ -580,7 +586,7 @@ int main ( int argc, char** argv )
 
 		double time_first_cuda_malloc = compute_elapsed_time(start_first_cuda_malloc, end_first_cuda_malloc);
 
-		printf("First cuda malloc takes [%f] \n", time_first_cuda_malloc);
+		//printf("First cuda malloc has taken [%f] ms\n", time_first_cuda_malloc);
 
 	    return 0;
 
