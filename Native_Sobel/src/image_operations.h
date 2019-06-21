@@ -9,6 +9,10 @@
 #define IMAGE_OPERATIONS_H_
 
 #include <sys/time.h>
+#include "string.h"
+#include "stdlib.h"
+#include "math.h"
+#include "stdio.h"
 
 typedef unsigned char byte;
 
@@ -25,6 +29,8 @@ void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img);
 
 double compute_elapsed_time(struct timeval time_begin, struct timeval time_end);
 
+void output_gray_scale_image(_Bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name);
 
+void output_gradient(_Bool intermediate_output, byte * sobel_res, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name);
 
 #endif /* IMAGE_OPERATIONS_H_ */

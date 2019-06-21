@@ -2,14 +2,47 @@
 
 
 #include "image_operations.h"
-#include "string.h"
-#include "stdlib.h"
-#include "math.h"
+#include "file_operations.h"
 
 
 typedef unsigned char byte;
 
 #define SOBEL_OP_SIZE 9
+
+//Output: imgs_out/img_gray.png as an image containing the gray-scale input image
+void output_gray_scale_image(_Bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
+{
+	if(intermediate_output)
+	{
+		char * file_gray = "imgs_out/img_gray.gray";
+		writeFile(file_gray, gray_image, gray_size);
+
+		char * pngConvertGray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, " ", png_file_name};
+		char * strGrayToPNG = arrayStringsToString(pngConvertGray, 8, string_buffer_size);
+		system(strGrayToPNG);
+
+		printf("Output gray-scale image [%s] \n", file_gray);
+	}
+
+}
+
+//Used both for horizontal gradient and vertical gradient
+//sobel_res = sobel_h_res or sobel_v_res
+void output_gradient(_Bool intermediate_output, byte * sobel_res, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
+{
+	  if(intermediate_output)
+	  {
+			//output the horizontal axis-gradient to an image file
+	        char * file_out_grad = "imgs_out/sobel_grad.gray";
+			writeFile(file_out_grad, sobel_res, gray_size);
+			//Convert the output file to PNG
+			char * pngConvert[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_grad, " ", png_file_name};
+			char * strGradToPNG = arrayStringsToString(pngConvert, 8, string_buffer_size);
+			system(strGradToPNG);
+			printf("Output [%s] \n", png_file_name);
+
+	   }
+}
 
 
 
