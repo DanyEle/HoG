@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CU_SRCS += \
+../kernels.cu \
 ../main.cu 
 
 C_SRCS += \
@@ -11,9 +12,11 @@ C_SRCS += \
 
 OBJS += \
 ./functions.o \
+./kernels.o \
 ./main.o 
 
 CU_DEPS += \
+./kernels.d \
 ./main.d 
 
 C_DEPS += \

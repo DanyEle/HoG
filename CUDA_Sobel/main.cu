@@ -3,12 +3,15 @@
 
 #include "functions.c"
 
-#define STRING_BUFFER_SIZE 1024
 
 //false --> No vertical gradient and horizontal gradient are output
-//true --> Vertical gradient and horizontal gradient are outout
+//true --> Vertical gradient and horizontal gradient are outut
 #define INTERMEDIATE_OUTPUT false
 #define SOBEL_OP_SIZE 9
+#define STRING_BUFFER_SIZE 1024
+
+#define HANDLE_ERROR( err ) ( HandleError( err, __FILE__, __LINE__ ) )
+#define get_time(time) (gettimeofday(&time, NULL))
 
 
 #include "string.h"
@@ -19,11 +22,6 @@
 #include <time.h>
 #include <sys/time.h>
 
-
-
-
-
-#define HANDLE_ERROR( err ) ( HandleError( err, __FILE__, __LINE__ ) )
 
 static void HandleError( cudaError_t err, const char *file, int line )
 {
@@ -151,180 +149,160 @@ __global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_
 
 int main ( int argc, char** argv )
 {
-		//dummy CUDA malloc
-		byte * dummy_array;
+		//all the time_val declarations are put at the beginning of the file for better code readability
+		struct timeval comp_start_load_img, comp_end_load_img;
+		struct timeval i_o_start_load_img, i_o_end_load_img;
+		struct timeval comp_start_img_conv, comp_end_img_conv;
+		struct timeval start_alloc_rgb, end_alloc_rgb;
+		struct timeval start_first_cuda_malloc, end_first_cuda_malloc;
+		struct timeval comp_start_rgb_to_gray, comp_end_rgb_to_gray;
+		struct timeval start_gray_vec_copy, end_gray_vec_copy;
+		struct timeval comp_start_str_alloc, comp_end_str_alloc;
+		struct timeval start_free_rgb, end_free_rgb;
+		struct timeval comp_start_alloc_h_vec, comp_end_alloc_h_vec;
+		struct timeval start_h_vec_alloc, end_h_vec_alloc;
+		struct timeval comp_start_horiz_grad, comp_end_horiz_grad;
+		struct timeval start_h_vec_copy, end_h_vec_copy;
+		struct timeval start_h_vec_free, 	end_h_vec_free;
+		struct timeval comp_start_alloc_v_grad, comp_end_alloc_v_grad;
+		struct timeval start_v_vec_alloc, end_v_vec_alloc;
+		struct timeval comp_start_vert_grad, comp_end_vert_grad;
+		struct timeval start_v_vec_copy, end_v_vec_copy;
+		struct timeval start_countour_alloc, end_countour_alloc;
+		struct timeval start_countour_copy, end_countour_copy;
+		struct timeval start_free_countour, end_free_countour;
+		struct timeval i_o_start_write_img, i_o_end_write_img;
 
+
+		//dummy CUDA malloc to "waste" time just here and not in the middle of the computation
+		byte * dummy_array;
 		HANDLE_ERROR ( cudaMalloc((void **)&dummy_array , 1*sizeof(byte)));
 
-		//actual computation
-		struct timeval comp_start_load_img, comp_end_load_img;
-
-		gettimeofday(&comp_start_load_img, NULL);
+		//actual computation begins
+		get_time(comp_start_load_img);
 		if(argc < 2)
 		{
 			printf("You did not provide any input image name. Please, provide an input image name and retry. \n");
 			return -2;
 		}
 
-
 		//###########1. STEP - LOAD THE IMAGE, ITS HEIGHT, WIDTH AND CONVERT IT TO RGB FORMAT#########
 
 		//Specify the input image. Formats supported: png, jpg, GIF.
-		//const char * fileInputName = "imgs_in/hua_hua.jpg";
-		//Example argv[1] = "imgs_in/hua_hua.pjg";
-		const char * fileInputName = argv[1];
-		const char * spaceDiv = " ";
-		const char * fileOutputRGB = "imgs_out/image.rgb";
-		const char *pngStrings[4] = {"convert ", fileInputName, spaceDiv, fileOutputRGB};
-		const char * strPngToRGB = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
+		const char * file_output_rgb = "imgs_out/image.rgb";
+		const char *png_strings[4] = {"convert ", argv[1], " ", file_output_rgb};
+		const char * str_PNG_to_RGB = array_strings_to_string(png_strings, 4, STRING_BUFFER_SIZE);
 
-		//Put back
-		//printf("Loading input image [%s] \n", fileInputName);
+		//printf("Loading input image [%s] \n", fileInputName); //debug
 
-		gettimeofday(&comp_end_load_img, NULL);
+		get_time(comp_end_load_img);
 
-		struct timeval i_o_start_load_img, i_o_end_load_img;
-		gettimeofday(&i_o_start_load_img, NULL);
+		get_time(i_o_start_load_img);
 		//execute the conversion from PNG to RGB, as that format is required for the program
-		int status_conversion = system(strPngToRGB);
-		gettimeofday(&i_o_end_load_img, NULL);
+		int status_conversion = system(str_PNG_to_RGB);
+		get_time(i_o_end_load_img);
 
-		struct timeval comp_start_img_conv, comp_end_img_conv;
 
-		gettimeofday(&comp_start_img_conv, NULL);
+		get_time(comp_start_img_conv);
 		if(status_conversion != 0)
 		{
 			printf("ERROR! Conversion of input PNG image to RGB was not successful. Program aborting.\n");
 			return -1;
 		}
-		//Put back
-		//printf("Converted input image to RGB [%s] \n", fileOutputRGB);
-
 		//get the height and width of the input image
 		int width = 0;
 		int height = 0;
 
-		getImageSize(fileInputName, &width, &height);
+		getImageSize(argv[1], &width, &height);
 
-		//Put back
-		//printf("Size of the loaded image: width=%d height=%d \n", width, height);
+		//printf("Size of the loaded image: width=%d height=%d \n", width, height); //debug
 
-		//Three dimensions because the input image is in colored format(R,G,B)
+		//Three dimensions because the input image is in RGB format
 		int rgb_size = width * height * 3;
-		//Put back
-		//printf("Total amount of pixels in RGB input image is [%d] \n", rgb_size);
+
 		//Used as a buffer for all pixels of the image
 		byte * rgb_image;
 
 		//Load up the input image in RGB format into one single flattened array (rgbImage)
-		readFile(fileOutputRGB, &rgb_image, rgb_size);
+		readFile(file_output_rgb, &rgb_image, rgb_size);
 
 		//########2. step - convert RGB image to gray-scale
 	    int gray_size = rgb_size / 3;
-	    byte * rVector, * gVector, * bVector;
+	    byte * r_vector, * g_vector, * b_vector;
 
 	    //now take the RGB image vector and create three separate arrays for the R,G,B dimensions
-	    getDimensionFromRGBVec(0, rgb_image,  &rVector, gray_size);
-	    getDimensionFromRGBVec(1, rgb_image,  &gVector, gray_size);
-	    getDimensionFromRGBVec(2, rgb_image,  &bVector, gray_size);
+	    get_dimension_from_RGB_vec(0, rgb_image,  &r_vector, gray_size);
+	    get_dimension_from_RGB_vec(1, rgb_image,  &g_vector, gray_size);
+	    get_dimension_from_RGB_vec(2, rgb_image,  &b_vector, gray_size);
 
 	    //allocate memory on the device for the r,g,b vectors
 	    byte * dev_r_vec, * dev_g_vec, * dev_b_vec;
 	    byte * dev_gray_image;
 
-		gettimeofday(&comp_end_img_conv, NULL);
-		struct timeval start_alloc_rgb, end_alloc_rgb;
-		gettimeofday(&start_alloc_rgb, NULL);
+		get_time(comp_end_img_conv);
+		get_time(start_alloc_rgb);
 
 
-		struct timeval start_first_cuda_malloc, end_first_cuda_malloc;
-
-		gettimeofday(&start_first_cuda_malloc, NULL);
+		get_time(start_first_cuda_malloc);
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_r_vec , gray_size*sizeof(byte)));
-	    gettimeofday(&end_first_cuda_malloc, NULL);
+	    get_time(end_first_cuda_malloc);
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_g_vec, gray_size*sizeof(byte)));
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_b_vec, gray_size*sizeof(byte)));
 
 	    //copy the content of the r,g,b vectors from the host to the device
-	    HANDLE_ERROR (cudaMemcpy (dev_r_vec , rVector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
-	    HANDLE_ERROR (cudaMemcpy (dev_g_vec , gVector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
-	    HANDLE_ERROR (cudaMemcpy (dev_b_vec , bVector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
+	    HANDLE_ERROR (cudaMemcpy (dev_r_vec , r_vector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
+	    HANDLE_ERROR (cudaMemcpy (dev_g_vec , g_vector , gray_size*sizeof(byte), cudaMemcpyHostToDevice));
+	    HANDLE_ERROR (cudaMemcpy (dev_b_vec , b_vector, gray_size*sizeof(byte), cudaMemcpyHostToDevice));
 	    //allocate memory on the device for the output gray image
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_gray_image, gray_size*sizeof(byte)));
 
-		gettimeofday(&end_alloc_rgb, NULL);
+		get_time(end_alloc_rgb);
 
-		struct timeval comp_start_rgb_to_gray, comp_end_rgb_to_gray;
-		gettimeofday(&comp_start_rgb_to_gray, NULL);
+		get_time(comp_start_rgb_to_gray);
 
 	    //actually run the kernel to convert input RGB file to gray-scale
 	    rgb_img_to_gray <<< width, height>>> (dev_r_vec, dev_g_vec, dev_b_vec, dev_gray_image, gray_size) ;
 	    cudaDeviceSynchronize();
 
-	    //TODO: use malloc instead of [gray_size]
-	    //byte gray_image[gray_size];
 		byte * gray_image = (byte *) malloc(gray_size * sizeof(byte));
 
+		get_time(comp_end_rgb_to_gray);
 
-		gettimeofday(&comp_end_rgb_to_gray, NULL);
-
-		struct timeval start_gray_vec_copy, end_gray_vec_copy;
-
-		gettimeofday(&start_gray_vec_copy, NULL);
+		get_time(start_gray_vec_copy);
 	    //Now take the device gray vector and bring it back to the host
 	    HANDLE_ERROR (cudaMemcpy(gray_image , dev_gray_image , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
-		gettimeofday(&end_gray_vec_copy, NULL);
+		get_time(end_gray_vec_copy);
 
-		struct timeval comp_start_str_alloc, comp_end_str_alloc;
-
-		gettimeofday(&comp_start_str_alloc, NULL);
+		get_time(comp_start_str_alloc);
 		char str_width[100];
 		sprintf(str_width, "%d", width);
 
 		char str_height[100];
 		sprintf(str_height, "%d", height);
 
-		gettimeofday(&comp_end_str_alloc, NULL);
+		get_time(comp_end_str_alloc);
 
-		if(INTERMEDIATE_OUTPUT)
-		{
-			 //let's see what's in there, shall we?
-			const char * file_gray = "imgs_out/img_gray.gray";
-			writeFile(file_gray, gray_image, gray_size);
-			printf("Total amount of pixels in gray-scale image is [%d] \n", gray_size);
-			const char * file_png_gray = "imgs_out/img_gray.png";
+		//output the gray-scale image to a PNG file if INTERMEDIATE_OUTPUT == true
+		output_gray_scale_image(INTERMEDIATE_OUTPUT, gray_image, gray_size, str_width, str_height, STRING_BUFFER_SIZE, "imgs_out/img_gray.png");
 
-			const char * pngConvertGray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, spaceDiv, file_png_gray};
-			char * strGrayToPNG = arrayStringsToString(pngConvertGray, 8, STRING_BUFFER_SIZE);
-			system(strGrayToPNG);
-			printf("Converted gray image to PNG [%s]\n", file_png_gray);
-		}
-
-
-		struct timeval start_free_rgb, end_free_rgb;
-
-		gettimeofday(&start_free_rgb, NULL);
+		get_time(start_free_rgb);
 	    cudaFree (dev_r_vec);
 	    cudaFree (dev_g_vec);
 		cudaFree (dev_b_vec);
-		gettimeofday(&end_free_rgb, NULL);
+		get_time(end_free_rgb);
 
 		//######################3. Step - Compute vertical and horizontal gradient ##########
 
 		//###Compute the HORIZONTAL GRADIENT#####
 
-		struct timeval comp_start_alloc_h_vec, comp_end_alloc_h_vec;
-
-		gettimeofday(&comp_start_alloc_h_vec, NULL);
+		get_time(comp_start_alloc_h_vec);
    	    //host horizontal kernel
 		int sobel_h[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
 		int * dev_sobel_h;
    	    byte * dev_sobel_h_res;
-		gettimeofday(&comp_end_alloc_h_vec, NULL);
+		get_time(comp_end_alloc_h_vec);
 
-		struct timeval start_h_vec_alloc, end_h_vec_alloc;
-
-		gettimeofday(&start_h_vec_alloc, NULL);
+		get_time(start_h_vec_alloc);
 
 		//allocate memory for device horizontal kernel
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h , SOBEL_OP_SIZE*sizeof(int)));
@@ -335,64 +313,41 @@ int main ( int argc, char** argv )
 	    //allocate memory for the resulting horizontal gradient on the device
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_sobel_h_res , gray_size*sizeof(byte)));
 
-		gettimeofday(&end_h_vec_alloc, NULL);
+		get_time(end_h_vec_alloc);
 
-		struct timeval comp_start_horiz_grad, comp_end_horiz_grad;
 
-		gettimeofday(&comp_start_horiz_grad, NULL);
+		get_time(comp_start_horiz_grad);
 		//perform horizontal gradient calculation for every pixel
 		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
 	    cudaDeviceSynchronize();
 
-
-		//fixed segmentation fault when processing large images
+		//fixed segmentation fault when processing large images by using a malloc
 		byte* sobel_h_res = (byte*) malloc(gray_size * sizeof(byte));
-
-		gettimeofday(&comp_end_horiz_grad, NULL);
-
+		get_time(comp_end_horiz_grad);
 		//copy the resulting horizontal array from device to host
-		struct timeval start_h_vec_copy, end_h_vec_copy;
 
-		gettimeofday(&start_h_vec_copy, NULL);
+		get_time(start_h_vec_copy);
 	    HANDLE_ERROR (cudaMemcpy(sobel_h_res , dev_sobel_h_res , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
-	    gettimeofday(&end_h_vec_copy, NULL);
+	    get_time(end_h_vec_copy);
 
-		struct timeval start_h_vec_free, end_h_vec_free;
 
-		gettimeofday(&start_h_vec_free, NULL);
+		get_time(start_h_vec_free);
 	    //free-up the memory for the vectors allocated
 	    cudaFree(dev_sobel_h);
-	    gettimeofday(&end_h_vec_free, NULL);
+	    get_time(end_h_vec_free);
 
-	    const char * strGradToPNG;
+	    //output the horizontal gradient to a file if INTERMEDIATE_OUTPUT == true
+	    output_gradient(INTERMEDIATE_OUTPUT, sobel_h_res, gray_size, str_width, str_height, STRING_BUFFER_SIZE, "imgs_out/sobel_horiz_grad.png");
 
-	    if(INTERMEDIATE_OUTPUT)
-	    {
-			//output the horizontal axis-gradient to a file
-			const char * file_out_h_grad = "imgs_out/sobel_horiz_grad.gray";
-			//Output the horizontal axis' gradient calculation
-			writeFile(file_out_h_grad, sobel_h_res, gray_size);
-			printf("Output horizontal gradient to [%s] \n", file_out_h_grad);
-			const char * fileHorGradPNG = "imgs_out/sobel_horiz_grad.png";
-			printf("Converted horizontal gradient: ");
-			printf("[%s] \n", fileHorGradPNG);
-			//Convert the output file to PNG
-			const char * pngConvertHor[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_h_grad, spaceDiv, fileHorGradPNG};
-			const char * strGradToPNG = arrayStringsToString(pngConvertHor, 8, STRING_BUFFER_SIZE);
-			system(strGradToPNG);
-	    }
-
-		struct timeval comp_start_alloc_v_grad, comp_end_alloc_v_grad;
-		gettimeofday(&comp_start_alloc_v_grad, NULL);
+		get_time(comp_start_alloc_v_grad);
 		//####Compute the VERTICAL GRADIENT#####
 	    int sobel_v[] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
 		int * dev_sobel_v;
 		byte * dev_sobel_v_res;
-		gettimeofday(&comp_end_alloc_v_grad, NULL);
+		get_time(comp_end_alloc_v_grad);
 
-		struct timeval start_v_vec_alloc, end_v_vec_alloc;
 
-		gettimeofday(&start_v_vec_alloc, NULL);
+		get_time(start_v_vec_alloc);
 
 		//allocate memory for device vertical kernel
 		HANDLE_ERROR (cudaMalloc((void **)&dev_sobel_v , SOBEL_OP_SIZE*sizeof(int)));
@@ -403,10 +358,9 @@ int main ( int argc, char** argv )
 		//allocate memory for the resulting vertical gradient on the device
 		HANDLE_ERROR (cudaMalloc((void **)&dev_sobel_v_res , gray_size*sizeof(byte)));
 
-		gettimeofday(&end_v_vec_alloc, NULL);
+		get_time(end_v_vec_alloc);
 
-		struct timeval comp_start_vert_grad, comp_end_vert_grad;
-		gettimeofday(&comp_start_vert_grad, NULL);
+		get_time(comp_start_vert_grad);
 
 		//perform vertical gradient calculation for every pixel
 		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
@@ -417,56 +371,38 @@ int main ( int argc, char** argv )
 		//fixed segmentation fault issue with big images
 		byte* sobel_v_res = (byte*) malloc(gray_size * sizeof(byte));
 
-		gettimeofday(&comp_end_vert_grad, NULL);
+		get_time(comp_end_vert_grad);
 
-		struct timeval start_v_vec_copy, end_v_vec_copy;
 
-		gettimeofday(&start_v_vec_copy, NULL);
+		get_time(start_v_vec_copy);
 		HANDLE_ERROR (cudaMemcpy(sobel_v_res , dev_sobel_v_res , gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
-		gettimeofday(&end_v_vec_copy, NULL);
+		get_time(end_v_vec_copy);
 
 		//free-up the memory for the vectors allocated
 		struct timeval start_v_vec_free, end_v_vec_free;
-		gettimeofday(&start_v_vec_free, NULL);
+		get_time(start_v_vec_free);
 		cudaFree(dev_sobel_v);
-		gettimeofday(&end_v_vec_free, NULL);
+		get_time(end_v_vec_free);
 
 		struct timeval comp_start_countour_alloc, comp_end_countour_alloc;
-		gettimeofday(&comp_start_countour_alloc, NULL);
+		get_time(comp_start_countour_alloc);
 
-		if(INTERMEDIATE_OUTPUT)
-		{
-			const char * file_out_v_grad = "imgs_out/sobel_vert_grad.gray";
-
-			//Output the vertical axis' gradient calculated
-			writeFile(file_out_v_grad, sobel_v_res, gray_size);
-
-			printf("Output vertical gradient to [%s] \n", file_out_v_grad);
-			const char * fileVerGradPNG = "imgs_out/sobel_vert_grad.png";
-
-			const char * pngConvertVer[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_v_grad, spaceDiv, fileVerGradPNG};
-
-			strGradToPNG = arrayStringsToString(pngConvertVer, 8, STRING_BUFFER_SIZE);
-			system(strGradToPNG);
-		}
-
+	    output_gradient(INTERMEDIATE_OUTPUT, sobel_v_res, gray_size, str_width, str_height, STRING_BUFFER_SIZE, "imgs_out/sobel_vert_grad.png");
 
 		//#############4. Step - Compute the countour by putting together the vertical and horizontal gradients####
-
 		//allocate device memory for the final vector containing the countour
 
 		byte * dev_countour_img;
-		gettimeofday(&comp_end_countour_alloc, NULL);
+		get_time(comp_end_countour_alloc);
 
-		struct timeval start_countour_alloc, end_countour_alloc;
 
-		gettimeofday(&start_countour_alloc, NULL);
+		get_time(start_countour_alloc);
 		HANDLE_ERROR ( cudaMalloc((void **)&dev_countour_img , gray_size*sizeof(byte)));
-		gettimeofday(&end_countour_alloc, NULL);
+		get_time(end_countour_alloc);
 
 		struct timeval comp_start_countour_merge, comp_end_countour_merge;
 
-		gettimeofday(&comp_start_countour_merge, NULL);
+		get_time(comp_start_countour_merge);
 		contour <<< width, height>>> (dev_sobel_h_res, dev_sobel_v_res, gray_size, dev_countour_img);
 	    cudaDeviceSynchronize();
 
@@ -474,52 +410,24 @@ int main ( int argc, char** argv )
 		//byte countour_img[gray_size];
 		byte * countour_img = (byte *) malloc(gray_size * sizeof(byte));
 
-		gettimeofday(&comp_end_countour_merge, NULL);
+		get_time(comp_end_countour_merge);
 
-		struct timeval start_countour_copy, end_countour_copy;
-
-		gettimeofday(&start_countour_copy, NULL);
+		get_time(start_countour_copy);
 		HANDLE_ERROR (cudaMemcpy(countour_img, dev_countour_img, gray_size*sizeof(byte) , cudaMemcpyDeviceToHost));
-		gettimeofday(&end_countour_copy, NULL);
+		get_time(end_countour_copy);
 
-		struct timeval start_free_countour, end_free_countour;
-
-		gettimeofday(&start_free_countour, NULL);
+		get_time(start_free_countour);
 		//free-up all the memory from the allocated vectors
 	    cudaFree(dev_sobel_h_res);
 	    cudaFree(dev_sobel_v_res);
 	    cudaFree(dev_countour_img);
-	    gettimeofday(&end_free_countour, NULL);
+	    get_time(end_free_countour);
 
 	    //######Display the resulting countour image
 
-		struct timeval comp_start_countour_str_alloc, comp_end_countour_str_alloc;
-		gettimeofday(&comp_start_countour_str_alloc, NULL);
-		const char * file_sobel_out = "imgs_out/sobel_countour.gray";
-		const char * file_sobel_png = "imgs_out/sobel_countour.png";
-		const char * pngConvertContour[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_sobel_out, spaceDiv, file_sobel_png};
-		const char * strSobelToPNG = arrayStringsToString(pngConvertContour, 8, STRING_BUFFER_SIZE);
-		gettimeofday(&comp_end_countour_str_alloc, NULL);
-
-
-		struct timeval i_o_start_write_gray_countour, i_o_end_write_gray_countour;
-
-		gettimeofday(&i_o_start_write_gray_countour, NULL);
-		writeFile(file_sobel_out, countour_img, gray_size);
-		gettimeofday(&i_o_end_write_gray_countour, NULL);
-		//Put back
-		//printf("Output countour to [%s] \n", file_sobel_out);
-
-		//actually execute the conversion from PNG to RGB, as that format is required for the program
-		struct timeval i_o_start_write_img, i_o_end_write_img;
-		gettimeofday(&i_o_start_write_img, NULL);
-		system(strSobelToPNG);
-		gettimeofday(&i_o_end_write_img, NULL);
-
-		//Put back
-		//printf("Converted countour: [%s] \n", file_sobel_png);
-		//printf("SUCCESS! Successfully applied Sobel filter to the input image!\n");
-		//printf("file loading and writing time: [%d] ms", write_load_total_time);
+		get_time(i_o_start_write_img);
+	    output_gradient(true, countour_img, gray_size, str_width, str_height, STRING_BUFFER_SIZE, "imgs_out/sobel_countour.png");
+		get_time(i_o_end_write_img);
 
 
 		//#############5. Step - Display the elapsed time in the different parts of the code
@@ -559,20 +467,18 @@ int main ( int argc, char** argv )
 		double comp_time_v_grad = compute_elapsed_time(comp_start_vert_grad, comp_end_vert_grad);
 		double comp_time_count_alloc = compute_elapsed_time(comp_start_countour_alloc, comp_end_countour_alloc);
 		double comp_time_count_merge = compute_elapsed_time(comp_start_countour_merge, comp_end_countour_merge);
-		double comp_time_count_str_alloc = compute_elapsed_time(comp_start_countour_str_alloc, comp_end_countour_str_alloc);
 
 		double total_time_gpu_comp = comp_time_load_img + comp_time_convert_img + comp_time_rgb_to_gray + comp_time_str_alloc + comp_time_h_alloc +
-						comp_time_h_grad + comp_time_v_alloc + comp_time_v_grad + comp_time_count_alloc + comp_time_count_merge + comp_time_count_str_alloc;
+						comp_time_h_grad + comp_time_v_alloc + comp_time_v_grad + comp_time_count_alloc + comp_time_count_merge ;
 
 		//printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp);
 		printf("%f \n", total_time_gpu_comp);
 
 		//##Input/Output over the disk (image loading and final image writing)##
 		double i_o_time_load_img = compute_elapsed_time(i_o_start_load_img, i_o_end_load_img);
-		double i_o_time_write_gray_countour = compute_elapsed_time(i_o_start_write_gray_countour, i_o_end_write_gray_countour);
 		double i_o_time_write_img = compute_elapsed_time(i_o_start_write_img, i_o_end_write_img);
 
-		double total_time_i_o = i_o_time_load_img + i_o_time_write_gray_countour + i_o_time_write_img;
+		double total_time_i_o = i_o_time_load_img + i_o_time_write_img;
 
 		//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o);
 		printf("%f \n", total_time_i_o);

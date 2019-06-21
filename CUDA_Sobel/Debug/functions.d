@@ -17,6 +17,7 @@
     /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
     /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
     /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
+    /usr/lib/gcc/x86_64-linux-gnu/6/include/stdbool.h \
     /usr/include/stdio.h \
     /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
     /usr/lib/gcc/x86_64-linux-gnu/6/include/stddef.h \

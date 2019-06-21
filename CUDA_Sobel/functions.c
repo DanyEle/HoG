@@ -7,7 +7,6 @@
 
 
 
-
 typedef unsigned char byte;
 
 
@@ -129,7 +128,7 @@ int getImageSize(const char *fn, int *x,int *y)
 //	     buffer_size: the size of the buffer for the char* to be created (max length of buffer)
 //Output: a string (char*) containing the concatenation of all strings in the array
 //passed as input
-char * arrayStringsToString(const char ** strings, int stringsAmount, int buffer_size)
+char * array_strings_to_string(const char ** strings, int stringsAmount, int buffer_size)
 {
 	char * strConvert = (char*) malloc(buffer_size);
 
@@ -148,7 +147,7 @@ char * arrayStringsToString(const char ** strings, int stringsAmount, int buffer
 //		 		   = 1 - G
 //				   = 2 - B
 //Output: dim_vector: the vector extracted from the RGB vector image corresponding to the dimension specified
-void getDimensionFromRGBVec(int dimension, byte* rgbImage,  byte** dim_vector, int gray_size)
+void get_dimension_from_RGB_vec(int dimension, byte* rgbImage,  byte** dim_vector, int gray_size)
 {
 	 // Take size for gray image and allocate memory. Just one dimension for gray-scale image
 	    * dim_vector = (byte*) malloc(sizeof(byte) * gray_size);
@@ -178,4 +177,43 @@ double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
 
 	return time_elapsed_ms;
 }
+
+
+//Functions to output files to disk
+
+
+//Output: imgs_out/img_gray.png as an image containing the gray-scale input image
+void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, const char * png_file_name)
+{
+	if(intermediate_output)
+	{
+		const char * file_gray = "imgs_out/img_gray.gray";
+		writeFile(file_gray, gray_image, gray_size);
+
+		const char * PNG_convert_to_gray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, " ", png_file_name};
+		const char * str_gray_to_PNG = array_strings_to_string(PNG_convert_to_gray, 8, string_buffer_size);
+		system(str_gray_to_PNG);
+
+		printf("Output gray-scale image [%s] \n", file_gray);
+	}
+
+}
+
+//Used both for horizontal gradient and vertical gradient
+//sobel_res = sobel_h_res or sobel_v_res
+void output_gradient(bool intermediate_output, byte * sobel_res, int gray_size, char * str_width, char * str_height, int string_buffer_size, const char * png_file_name)
+{
+	  if(intermediate_output)
+	  {
+			//output the horizontal axis-gradient to an image file
+	        const char * file_out_grad = "imgs_out/sobel_grad.gray";
+			writeFile(file_out_grad, sobel_res, gray_size);
+			//Convert the output file to PNG
+			const char * png_convert[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_grad, " ", png_file_name};
+			const char * str_grad_to_PNG = array_strings_to_string(png_convert, 8, string_buffer_size);
+			system(str_grad_to_PNG);
+			//printf("Output [%s] \n", png_file_name);
+	   }
+}
+
 
