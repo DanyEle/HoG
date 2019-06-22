@@ -38,12 +38,12 @@ __device__ int convolution(byte *X, int *Y, int c_size)
     return sum;
 }
 
-//Input: buffer: all the pixels in the input gray image
+//Input: dev_buffer: all the pixels in the input gray image
 //	     buffer_size: the amount of pixels in the gray image
 //		 width: the width of the input image
 //	     cindex: the current index of the pixel being considered
-//Output: op_mem. The current region of pixels being considered
-__device__ void makeOpMem(byte *dev_buffer, int buffer_size, int width, int cindex, byte *op_mem)
+//Output: op_mem. The current 3x3 region of pixels being considered around cindex
+__device__ void make_op_mem(byte *dev_buffer, int buffer_size, int width, int cindex, byte *op_mem)
 {
     int bottom = cindex-width < 0;
     int top = cindex+width >= buffer_size;
@@ -84,7 +84,7 @@ __global__ void it_conv(byte * dev_buffer, int buffer_size, int width, int * dev
     while(tid < buffer_size)
     {
     	//identify the region in the gray-scale image where the convolution is performed
-        makeOpMem(dev_buffer, buffer_size, width, tid, op_mem);
+        make_op_mem(dev_buffer, buffer_size, width, tid, op_mem);
 
         //actually carry out the convolution
         dev_res[tid] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));

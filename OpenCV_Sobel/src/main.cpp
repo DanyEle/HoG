@@ -1,9 +1,8 @@
 //============================================================================
 // Name        : main.cpp
 // Author      : Daniele Gadler
-// Version     :
+// Version     : 1.0
 // Description : Sobel operator in C++, using OpenCV
-// Source: https://docs.opencv.org/2.4/doc/tutorials/imgproc/imgtrans/sobel_derivatives/sobel_derivatives.html
 //============================================================================
 
 #include "opencv2/imgproc/imgproc.hpp"
@@ -21,15 +20,12 @@ using namespace cv;
 using namespace std;
 
 
-
-
-
 //Input: strings: an array containing strings
 //		 stringsAmount: the amount of strings present in the array
 //	     buffer_size: the size of the buffer for the char* to be created (max length of buffer)
 //Output: a string (char*) containing the concatenation of all strings in the array
 //passed as input
-char * arrayStringsToString(const char ** strings, int stringsAmount, int buffer_size)
+char * array_strings_to_string(const char ** strings, int stringsAmount, int buffer_size)
 {
 	char * strConvert = (char*) malloc(buffer_size);
 
@@ -60,21 +56,18 @@ double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
 //argv[1] = input image name
 int main( int argc, char** argv )
 {
-	 struct timeval comp_start_init_vars, comp_end_init_vars;
+	  struct timeval comp_start_init_vars, comp_end_init_vars;
 
-	 gettimeofday(&comp_start_init_vars, NULL);
+	  gettimeofday(&comp_start_init_vars, NULL);
 
-	 if(argc < 2) //was 3
-	 {
+	  if(argc < 2) //was 3
+	  {
 		printf("You did not provide any input image. Please, pass an input image and retry. \n");
 		return -2;
-	 }
+	  }
 
 	  //int amountThreads = atoi(argv[1]);
-	  char const * fileInputName = argv[1];
-
-	  //set the amount of threads for testing the performance while computing the sobel operator
-	  //cv::setNumThreads(amountThreads);
+	  char const * file_input_name = argv[1];
 
 	  Mat src, src_gray;
 	  Mat grad;
@@ -87,9 +80,9 @@ int main( int argc, char** argv )
 	  struct timeval i_o_start_read_img, i_o_end_read_img;
 
 	  gettimeofday(&i_o_start_read_img, NULL);
-	  //char const * inputFileName = "imgs_in/lena.png";
+
 	  ///1. Step - load an image from disk
-	  src = imread(fileInputName);
+	  src = imread(file_input_name);
 	  gettimeofday(&i_o_end_read_img, NULL);
 
 	  struct timeval comp_start_str_sobel, comp_end_str_sobel;
@@ -100,17 +93,17 @@ int main( int argc, char** argv )
 	  { return -1; }
 
 	  const char * spaceDiv = " ";
-	  const char * fileOutputRGB = "imgs_out/image.rgb";
-	  const char *pngStrings[4] = {"convert ", fileInputName, spaceDiv, fileOutputRGB};
-	  const char * strPngToRGB = arrayStringsToString(pngStrings, 4, STRING_BUFFER_SIZE);
-	  //printf("Loading input image [%s] \n", fileInputName);
+	  const char * file_output_RGB = "imgs_out/image.rgb";
+	  const char *PNG_strings[4] = {"convert ", file_input_name, spaceDiv, file_output_RGB};
+	  const char * str_PNG_to_RGB = array_strings_to_string(PNG_strings, 4, STRING_BUFFER_SIZE);
+	  //printf("Loading input image [%s] \n", file_input_name);
 	  gettimeofday(&comp_end_str_sobel, NULL);
 
 	  struct timeval i_o_start_conv_rgb_png, i_o_end_conv_rgb_png;
 
 	  gettimeofday(&i_o_start_conv_rgb_png, NULL);
 	  //actually execute the conversion from PNG to RGB, as that format is required for the program
-	  int status_conversion = system(strPngToRGB);
+	  int status_conversion = system(str_PNG_to_RGB);
 	  gettimeofday(&i_o_end_conv_rgb_png, NULL);
 
 
@@ -123,28 +116,22 @@ int main( int argc, char** argv )
 			printf("ERROR! Conversion of input PNG image to RGB was not successful. Program aborting.\n");
 			return -1;
 	  }
-	  //printf("Converted input image to RGB [%s] \n", fileOutputRGB);
 
-	  //2. Step - Apply a gaussian blur filter to reduce the noise, using kernel size = 3
-	  //GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
-
-	  //3. Step - Converted the filtered image to grayscale
+	  //2. Step - Converted the filtered image to grayscale
 	  cvtColor( src, src_gray, CV_BGR2GRAY );
 
-	  //4. Step - Compute derivatives over the X and Y axes
+	  //3. Step - Gradient over X axis
 	  Mat grad_x, grad_y;
 	  Mat abs_grad_x, abs_grad_y;
 
-	  //5. Step - Gradient over X axis
 	  Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
 	  convertScaleAbs( grad_x, abs_grad_x );
 
-	  //5. Step - Gradient over Y axis
-	  //Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
+	  //4. Step - Gradient over Y axis
 	  Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
 	  convertScaleAbs( grad_y, abs_grad_y );
 
-	  //6. Step - approximate the gradient by adding both directional gradients
+	  //5. Step - approximate the gradient by adding both directional gradients
 	  addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
 
 	  //And show the final result...
@@ -165,8 +152,7 @@ int main( int argc, char** argv )
 	  gettimeofday(&i_o_end_img_write, NULL);
 
 
-	  //7. Step - compute the time elapsed in the 'computation' phase and in the 'i/o' phase
-
+	  //6. Step - compute the time elapsed in the 'computation' phase and in the 'i/o' phase
 	  //i/o phase
 	  double i_o_time_read_img = compute_elapsed_time(i_o_start_read_img, i_o_end_read_img);
 	  double i_o_time_conv_img = compute_elapsed_time(i_o_start_conv_rgb_png, i_o_end_conv_rgb_png);
@@ -185,7 +171,7 @@ int main( int argc, char** argv )
 
 	  printf("%f \n", total_time_compute);
 
-	  //overall i/o + compute phase
+	  //overall: i/o + compute phase
 
 	  double overall_total_time = total_time_i_o + total_time_compute;
 

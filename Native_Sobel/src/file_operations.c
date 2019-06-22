@@ -9,17 +9,15 @@
 typedef unsigned char byte;
 
 
-/*
- * Reads file to *buffer.
- * We load a matrix as a "squashed" array
- * next pixel extracted as:
- * buffer += 3
- * buffer[0] = 0th-pixel R
- * buffer[1] = 1st-pixel G
- * buffer[2] = 2nd-pixel B
- */
-
-void readFile(char *file_name, byte **buffer, int buffer_size)
+//Input: file_name: the name of the file to be loaded
+//  	 buffer_size: amount of RGB pixels to be loaded
+//Output: buffer: the RGB pixels of the loaded image
+//The next pixel can be extracted as:
+//buffer += 3
+//buffer[0] = R-pixel
+//buffer[1] = G-pixel
+//buffer[2] = B-pixel
+void read_file(char *file_name, byte **buffer, int buffer_size)
 {
     //Open file
     FILE *file = fopen(file_name, "r");
@@ -29,7 +27,7 @@ void readFile(char *file_name, byte **buffer, int buffer_size)
 
     // Read every char of file ONE BY ONE (not the whole thing at once)
     // We do this because this should look closer to the assembly implementation
-    for(int i=0; i<buffer_size; i++)
+    for(int i=0; i < buffer_size; i++)
     {
         (*buffer)[i] = fgetc(file);
     }
@@ -43,7 +41,7 @@ void readFile(char *file_name, byte **buffer, int buffer_size)
  * Writes the RGB/gray-scale buffer to a file
  */
 
-void writeFile(char *file_name, byte *buffer, int buffer_size)
+void write_file(char *file_name, byte *buffer, int buffer_size)
 {
     // Open
     FILE *file = fopen(file_name, "w");
@@ -62,7 +60,7 @@ void writeFile(char *file_name, byte *buffer, int buffer_size)
 //Output: 0 if successfully got image size and stored into *x, *y
 //		  -1 if an error occurred (i.e.: most likely erroneous image format)
 //Credits to: http://www.cplusplus.com/forum/beginner/45217/
-int getImageSize(const char *fn, int *x,int *y)
+int get_image_size(const char *fn, int *x,int *y)
 {
     FILE *f=fopen(fn,"rb");
     if (f==0) return -1;
@@ -126,7 +124,7 @@ int getImageSize(const char *fn, int *x,int *y)
 //	     buffer_size: the size of the buffer for the char* to be created (max length of buffer)
 //Output: a string (char*) containing the concatenation of all strings in the array
 //passed as input
-char * arrayStringsToString(char ** strings, int stringsAmount, int buffer_size)
+char * array_strings_to_string(char ** strings, int stringsAmount, int buffer_size)
 {
 	char * strConvert = malloc(buffer_size);
 

@@ -5,10 +5,10 @@
 typedef unsigned char byte;
 
 
-void readFile(char *file_name, byte **buffer, int buffer_size);
-void writeFile(char *file_name, byte *buffer, int buffer_size);
-int getImageSize(const char *fn, int *x,int *y);
-char * arrayStringsToString(char ** strings, int stringsAmount, int buffer_size);
+void read_file(char *file_name, byte **buffer, int buffer_size);
+void write_file(char *file_name, byte *buffer, int buffer_size);
+int get_image_size(const char *fn, int *x,int *y);
+char * array_strings_to_string(char ** strings, int stringsAmount, int buffer_size);
 double compute_elapsed_time(struct timeval time_begin, struct timeval time_end);
 
 

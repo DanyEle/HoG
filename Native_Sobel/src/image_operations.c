@@ -1,24 +1,20 @@
 //Credits for this file go to: https://github.com/petermlm/SobelFilter
 
-
 #include "image_operations.h"
+
 #include "file_operations.h"
 
 
-typedef unsigned char byte;
-
-#define SOBEL_OP_SIZE 9
-
 //Output: imgs_out/img_gray.png as an image containing the gray-scale input image
-void output_gray_scale_image(_Bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
+void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
 {
 	if(intermediate_output)
 	{
 		char * file_gray = "imgs_out/img_gray.gray";
-		writeFile(file_gray, gray_image, gray_size);
+		write_file(file_gray, gray_image, gray_size);
 
 		char * pngConvertGray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, " ", png_file_name};
-		char * strGrayToPNG = arrayStringsToString(pngConvertGray, 8, string_buffer_size);
+		char * strGrayToPNG = array_strings_to_string(pngConvertGray, 8, string_buffer_size);
 		system(strGrayToPNG);
 
 		printf("Output gray-scale image [%s] \n", file_gray);
@@ -28,19 +24,18 @@ void output_gray_scale_image(_Bool intermediate_output, byte * gray_image, int g
 
 //Used both for horizontal gradient and vertical gradient
 //sobel_res = sobel_h_res or sobel_v_res
-void output_gradient(_Bool intermediate_output, byte * sobel_res, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
+void output_gradient(bool intermediate_output, byte * sobel_res, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
 {
 	  if(intermediate_output)
 	  {
 			//output the horizontal axis-gradient to an image file
 	        char * file_out_grad = "imgs_out/sobel_grad.gray";
-			writeFile(file_out_grad, sobel_res, gray_size);
+			write_file(file_out_grad, sobel_res, gray_size);
 			//Convert the output file to PNG
 			char * pngConvert[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_grad, " ", png_file_name};
-			char * strGradToPNG = arrayStringsToString(pngConvert, 8, string_buffer_size);
-			system(strGradToPNG);
+			char * str_grad_to_PNG = array_strings_to_string(pngConvert, 8, string_buffer_size);
+			system(str_grad_to_PNG);
 			printf("Output [%s] \n", png_file_name);
-
 	   }
 }
 
@@ -49,7 +44,7 @@ void output_gradient(_Bool intermediate_output, byte * sobel_res, int gray_size,
 //Input: - rgb image contained in the 'rgb' array
 //		 - buffer size: the size of the RGB image
 //Output: gray, an array containing the gray-scale image
-int rgbToGray(byte *rgb, byte **grayImage, int buffer_size)
+int rgb_to_gray(byte *rgb, byte **grayImage, int buffer_size)
 {
     // Take size for gray image and allocate memory. Just one dimension for gray-scale image
     int gray_size = buffer_size / 3;
@@ -72,8 +67,12 @@ int rgbToGray(byte *rgb, byte **grayImage, int buffer_size)
 }
 
 
-
-void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, byte *op_mem)
+//Input: buffer: all the pixels in the input gray image
+//	     buffer_size: the amount of pixels in the gray image
+//		 width: the width of the input image
+//	     cindex: the current index of the pixel being considered
+//Output: op_mem. The current 3x3 region of pixels being considered around cindex
+void make_op_mem(byte *buffer, int buffer_size, int width, int cindex, byte *op_mem)
 {
     int bottom = cindex-width < 0;
     int top = cindex+width >= buffer_size;
@@ -107,6 +106,11 @@ int convolution(byte *X, int *Y, int c_size)
 
 
 
+//Input: buffer: the gray-scale input image
+//		 buffer_size: the amount of gray pixels in the input image
+//	     width: the width of the input image
+//		 op: the 3x3 kernel used to convolve the gray-scale image
+//Output: res: the resulting horizontal/vertical gradient
 void itConv(byte *buffer, int buffer_size, int width, int *op, byte **res)
 {
     // Allocate memory for result
@@ -120,11 +124,10 @@ void itConv(byte *buffer, int buffer_size, int width, int *op, byte **res)
     for(int i=0; i < buffer_size; i++)
     {
         // Make op_mem
-        makeOpMem(buffer, buffer_size, width, i, op_mem);
+        make_op_mem(buffer, buffer_size, width, i, op_mem);
 
         // Convolution
         (*res)[i] = (byte) abs(convolution(op_mem, op, SOBEL_OP_SIZE));
-
         /*
          * The abs function is used in here to avoid storing negative numbers
          * in a byte data type array. It wouldn't make a different if the negative
@@ -134,8 +137,11 @@ void itConv(byte *buffer, int buffer_size, int width, int *op, byte **res)
     }
 }
 
-
-
+//Input: sobel_h: array containing the sobel horizontal gradient
+//		 sobel_v: array containing the sobel verticial gradient
+//       gray_size: the amount of pixels in the gray-scale image
+//Output: contour_img: the resulting countour pixels of the final image, where the the hor. and ver.gradient
+//have been put together
 void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img)
 {
     // Allocate memory for contour_img
@@ -148,6 +154,9 @@ void contour(byte *sobel_h, byte *sobel_v, int gray_size, byte **contour_img)
     }
 }
 
+//Input: - time_begin: the starting time
+//		 - time_end: the ending time
+//Output: the time elapsed between the starting time and the ending time
 double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
 {
 	//time in microseconds (us)
