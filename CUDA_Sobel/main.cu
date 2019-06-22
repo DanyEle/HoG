@@ -5,7 +5,7 @@
 
 
 //false --> No vertical gradient and horizontal gradient are output
-//true --> Vertical gradient and horizontal gradient are outut
+//true --> Vertical gradient and horizontal gradient are output
 #define INTERMEDIATE_OUTPUT false
 #define SOBEL_OP_SIZE 9
 #define STRING_BUFFER_SIZE 1024
@@ -22,6 +22,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include "kernels.cu"
+
 
 static void HandleError( cudaError_t err, const char *file, int line )
 {
@@ -32,119 +34,6 @@ static void HandleError( cudaError_t err, const char *file, int line )
     }
 }
 
-
-__global__ void contour(byte *dev_sobel_h, byte *dev_sobel_v, int gray_size, byte *dev_contour_img)
-{
-	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
-	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
-
-	int tid = abs(tid_x - tid_y);
-
-
-    // Performed on every pixel in parallel to calculate the contour image
-    while(tid < gray_size)
-    {
-        dev_contour_img[tid] = (byte) sqrt(pow((double)dev_sobel_h[tid], 2.0) + pow((double)dev_sobel_v[tid], 2.0));
-
-    	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
-
-    }
-}
-
-//called from 'it_conv' function
-__device__ int convolution(byte *X, int *Y, int c_size)
-{
-    int sum = 0;
-
-    for(int i=0; i < c_size; i++) {
-        sum += X[i] * Y[c_size-i-1];
-    }
-
-    return sum;
-}
-
-//called from 'it_conv' function
-__device__ void makeOpMem(byte *buffer, int buffer_size, int width, int cindex, byte *op_mem)
-{
-    int bottom = cindex-width < 0;
-    int top = cindex+width >= buffer_size;
-    int left = cindex % width == 0;
-    int right = (cindex+1) % width == 0;
-
-    op_mem[0] = !bottom && !left  ? buffer[cindex-width-1] : 0;
-    op_mem[1] = !bottom           ? buffer[cindex-width]   : 0;
-    op_mem[2] = !bottom && !right ? buffer[cindex-width+1] : 0;
-
-    op_mem[3] = !left             ? buffer[cindex-1]       : 0;
-    op_mem[4] = buffer[cindex];
-    op_mem[5] = !right            ? buffer[cindex+1]       : 0;
-
-    op_mem[6] = !top && !left     ? buffer[cindex+width-1] : 0;
-    op_mem[7] = !top              ? buffer[cindex+width]   : 0;
-    op_mem[8] = !top && !right    ? buffer[cindex+width+1] : 0;
-}
-
-
-__global__ void it_conv(byte * buffer, int buffer_size, int width, int * dev_op, byte *dev_res)
-{
-    // Temporary memory for each pixel operation
-    byte op_mem[SOBEL_OP_SIZE];
-    memset(op_mem, 0, SOBEL_OP_SIZE);
-    int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
-	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
-
-	//simple linearization
-	int tid = abs(tid_x - tid_y);
-
-    // Make convolution for every pixel. Each pixel --> one thread.
-    while(tid < buffer_size)
-    {
-        // Make op_mem
-        makeOpMem(buffer, buffer_size, width, tid, op_mem);
-
-        dev_res[tid] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
-        /*
-         * The abs function is used in here to avoid storing negative numbers
-         * in a byte data type array. It wouldn't make a different if the negative
-         * value was to be stored because the next time it is used the value is
-         * squared.
-         */
-    	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
-    }
-}
-
-
-
-
-//Input: dev_r_vec, dev_g_vec, dev_b_vec: vectors containing the R,G,B components of the input image
-//		 gray_size: amount of pixels in the RGB vector / 3
-//Output: dev_gray_image: a vector containing the gray-scale pixels of the resulting image
-
-// CUDA kernel to convert an image to gray-scale
-//gray-image's memory needs to be pre-allocated
-__global__ void rgb_img_to_gray( byte * dev_r_vec, byte * dev_g_vec, byte * dev_b_vec, byte * dev_gray_image, int gray_size)
-{
-    //Get the id of thread within a block
-	int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
-	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
-
-	//simple linearization of 2D space
-	int tid = abs(tid_x - tid_y);
-
-	//pixel-wise operation on the R,G,B vectors
-	while(tid < gray_size)
-	{
-		//r, g, b pixels
-		byte p_r = dev_r_vec[tid];
-		byte p_g = dev_g_vec[tid];
-		byte p_b = dev_b_vec[tid];
-
-		//Formula accordidev_ng to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
-		dev_gray_image[tid] = 0.30 * p_r + 0.59*p_g + 0.11*p_b;
-    	tid += blockDim.x * gridDim.x + blockDim.y * gridDim.y;
-
-	}
-}
 
 
 int main ( int argc, char** argv )
@@ -163,7 +52,7 @@ int main ( int argc, char** argv )
 		struct timeval start_h_vec_alloc, end_h_vec_alloc;
 		struct timeval comp_start_horiz_grad, comp_end_horiz_grad;
 		struct timeval start_h_vec_copy, end_h_vec_copy;
-		struct timeval start_h_vec_free, 	end_h_vec_free;
+		struct timeval start_h_vec_free, end_h_vec_free;
 		struct timeval comp_start_alloc_v_grad, comp_end_alloc_v_grad;
 		struct timeval start_v_vec_alloc, end_v_vec_alloc;
 		struct timeval comp_start_vert_grad, comp_end_vert_grad;
@@ -173,10 +62,11 @@ int main ( int argc, char** argv )
 		struct timeval start_free_countour, end_free_countour;
 		struct timeval i_o_start_write_img, i_o_end_write_img;
 
-
-		//dummy CUDA malloc to "waste" time just here and not in the middle of the computation
+		//dummy CUDA malloc to "waste" time just at the beginning of the program and not in the middle of the computation
 		byte * dummy_array;
+		get_time(start_first_cuda_malloc);
 		HANDLE_ERROR ( cudaMalloc((void **)&dummy_array , 1*sizeof(byte)));
+	    get_time(end_first_cuda_malloc);
 
 		//actual computation begins
 		get_time(comp_start_load_img);
@@ -198,10 +88,9 @@ int main ( int argc, char** argv )
 		get_time(comp_end_load_img);
 
 		get_time(i_o_start_load_img);
-		//execute the conversion from PNG to RGB, as that format is required for the program
+		//execute the conversion from PNG to RGB, as that format is required by the program
 		int status_conversion = system(str_PNG_to_RGB);
 		get_time(i_o_end_load_img);
-
 
 		get_time(comp_start_img_conv);
 		if(status_conversion != 0)
@@ -213,9 +102,7 @@ int main ( int argc, char** argv )
 		int width = 0;
 		int height = 0;
 
-		getImageSize(argv[1], &width, &height);
-
-		//printf("Size of the loaded image: width=%d height=%d \n", width, height); //debug
+		get_image_size(argv[1], &width, &height);
 
 		//Three dimensions because the input image is in RGB format
 		int rgb_size = width * height * 3;
@@ -224,7 +111,7 @@ int main ( int argc, char** argv )
 		byte * rgb_image;
 
 		//Load up the input image in RGB format into one single flattened array (rgbImage)
-		readFile(file_output_rgb, &rgb_image, rgb_size);
+		read_file(file_output_rgb, &rgb_image, rgb_size);
 
 		//########2. step - convert RGB image to gray-scale
 	    int gray_size = rgb_size / 3;
@@ -242,10 +129,7 @@ int main ( int argc, char** argv )
 		get_time(comp_end_img_conv);
 		get_time(start_alloc_rgb);
 
-
-		get_time(start_first_cuda_malloc);
-	    HANDLE_ERROR ( cudaMalloc((void **)&dev_r_vec , gray_size*sizeof(byte)));
-	    get_time(end_first_cuda_malloc);
+	    HANDLE_ERROR ( cudaMalloc((void **)&dev_r_vec, gray_size*sizeof(byte)));
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_g_vec, gray_size*sizeof(byte)));
 	    HANDLE_ERROR ( cudaMalloc((void **)&dev_b_vec, gray_size*sizeof(byte)));
 
@@ -315,7 +199,6 @@ int main ( int argc, char** argv )
 
 		get_time(end_h_vec_alloc);
 
-
 		get_time(comp_start_horiz_grad);
 		//perform horizontal gradient calculation for every pixel
 		it_conv <<< width, height>>> (dev_gray_image, gray_size, width, dev_sobel_h, dev_sobel_h_res);
@@ -346,7 +229,6 @@ int main ( int argc, char** argv )
 		byte * dev_sobel_v_res;
 		get_time(comp_end_alloc_v_grad);
 
-
 		get_time(start_v_vec_alloc);
 
 		//allocate memory for device vertical kernel
@@ -365,7 +247,6 @@ int main ( int argc, char** argv )
 		//perform vertical gradient calculation for every pixel
 		it_conv <<<width, height>>> (dev_gray_image, gray_size, width, dev_sobel_v, dev_sobel_v_res);
 	    cudaDeviceSynchronize();
-
 
 		//copy the resulting vertical array from device back to host
 		//fixed segmentation fault issue with big images
@@ -406,8 +287,7 @@ int main ( int argc, char** argv )
 		contour <<< width, height>>> (dev_sobel_h_res, dev_sobel_v_res, gray_size, dev_countour_img);
 	    cudaDeviceSynchronize();
 
-		//copy the resulting countour image from device back to host
-		//byte countour_img[gray_size];
+		//copy the resulting countour image from the device back to host
 		byte * countour_img = (byte *) malloc(gray_size * sizeof(byte));
 
 		get_time(comp_end_countour_merge);
@@ -452,8 +332,8 @@ int main ( int argc, char** argv )
 		double total_time_gpu_mem = time_alloc_rgb + time_free_rgb + time_copy_gray + time_alloc_h_vec + time_copy_h_vec + time_free_h_vec +
 							  time_alloc_v_vec + time_copy_v_vec + time_free_v_vec + time_alloc_countour + time_copy_countour + time_free_countour;
 
-		//printf("Time spent on GPU memory operations: [%f] ms\n", total_time_gpu_mem); //GPU memory operatio
-		printf("%f \n", total_time_gpu_mem); //GPU memory operatio
+		//printf("Time spent on GPU memory operations: [%f] ms\n", total_time_gpu_mem); //debug
+		printf("%f \n", total_time_gpu_mem);
 
 
 		//##Actual GPU computation##
@@ -471,7 +351,7 @@ int main ( int argc, char** argv )
 		double total_time_gpu_comp = comp_time_load_img + comp_time_convert_img + comp_time_rgb_to_gray + comp_time_str_alloc + comp_time_h_alloc +
 						comp_time_h_grad + comp_time_v_alloc + comp_time_v_grad + comp_time_count_alloc + comp_time_count_merge ;
 
-		//printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp);
+		//printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp); //debug
 		printf("%f \n", total_time_gpu_comp);
 
 		//##Input/Output over the disk (image loading and final image writing)##
@@ -480,13 +360,13 @@ int main ( int argc, char** argv )
 
 		double total_time_i_o = i_o_time_load_img + i_o_time_write_img;
 
-		//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o);
+		//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
 		printf("%f \n", total_time_i_o);
 
 		//##Overall time spent in the program
 		double overall_total_time = total_time_gpu_comp + total_time_gpu_mem + total_time_i_o;
 
-		//printf("Overall time spent in program [%f] ms \n", overall_total_time);
+		//printf("Overall time spent in program [%f] ms \n", overall_total_time); //debug
 		printf("%f \n", overall_total_time);
 
 

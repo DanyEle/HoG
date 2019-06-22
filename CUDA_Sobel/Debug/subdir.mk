@@ -10,6 +10,9 @@ CU_SRCS += \
 C_SRCS += \
 ../functions.c 
 
+O_SRCS += \
+../main.o 
+
 OBJS += \
 ./functions.o \
 ./kernels.o \

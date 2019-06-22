@@ -147,4 +147,5 @@
     /usr/include/texture_fetch_functions.h \
     /usr/include/texture_indirect_functions.h \
     /usr/include/surface_indirect_functions.h \
-    /usr/include/device_launch_parameters.h
+    /usr/include/device_launch_parameters.h \
+    ../kernels.cuh

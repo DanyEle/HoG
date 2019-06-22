@@ -21,7 +21,7 @@ typedef unsigned char byte;
  * buffer[2] = 2nd-pixel B
  */
 
-void readFile(const char *file_name, byte **buffer, int buffer_size)
+void read_file(const char *file_name, byte **buffer, int buffer_size)
 {
     //Open file
     FILE *file = fopen(file_name, "r");
@@ -45,7 +45,7 @@ void readFile(const char *file_name, byte **buffer, int buffer_size)
  * Writes the RGB/gray-scale buffer to a file
  */
 
-void writeFile(const char *file_name, byte *buffer, int buffer_size) //was * buffer
+void write_file(const char *file_name, byte *buffer, int buffer_size) //was * buffer
 {
     // Open
     FILE *file = fopen(file_name, "w");
@@ -64,7 +64,7 @@ void writeFile(const char *file_name, byte *buffer, int buffer_size) //was * buf
 //Output: 0 if successfully got image size and stored into *x, *y
 //		  -1 if an error occurred (i.e.: most likely erroneous image format)
 //Credits to: http://www.cplusplus.com/forum/beginner/45217/
-int getImageSize(const char *fn, int *x,int *y)
+int get_image_size(const char *fn, int *x,int *y)
 {
     FILE *f=fopen(fn,"rb");
     if (f==0) return -1;
@@ -188,7 +188,7 @@ void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gr
 	if(intermediate_output)
 	{
 		const char * file_gray = "imgs_out/img_gray.gray";
-		writeFile(file_gray, gray_image, gray_size);
+		write_file(file_gray, gray_image, gray_size);
 
 		const char * PNG_convert_to_gray[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_gray, " ", png_file_name};
 		const char * str_gray_to_PNG = array_strings_to_string(PNG_convert_to_gray, 8, string_buffer_size);
@@ -207,7 +207,7 @@ void output_gradient(bool intermediate_output, byte * sobel_res, int gray_size, 
 	  {
 			//output the horizontal axis-gradient to an image file
 	        const char * file_out_grad = "imgs_out/sobel_grad.gray";
-			writeFile(file_out_grad, sobel_res, gray_size);
+			write_file(file_out_grad, sobel_res, gray_size);
 			//Convert the output file to PNG
 			const char * png_convert[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_grad, " ", png_file_name};
 			const char * str_grad_to_PNG = array_strings_to_string(png_convert, 8, string_buffer_size);
