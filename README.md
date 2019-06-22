@@ -45,7 +45,8 @@ cd Sobel_Filter/Native_Sobel
 ./Debug/Native_Sobel imgs_in/512x512.png
 ```
 The 512x512.png image can be replaced by any other image (e.g.: 1024x512.png, 1024x1024.png, 2048x1024.png).
-The output lies in the Sobel_Filter/Native_Sobel/imgs_out/ folder. If you would like to execute 10 runs of the native C Sobel Filter with a certain input image, then just run:
+The output lies in the Sobel_Filter/Native_Sobel/imgs_out/ folder. 
+If you would like to execute 10 runs of the native C Sobel Filter with a certain input image, then just run:
 ```sh
 ./run_experiments.sh <input_image>
 ```
@@ -63,7 +64,8 @@ cd Sobel_Filter/OpenCV_Sobel
 ./compile.sh
 ./Debug/OpenCV_Sobel imgs_in/512x512.png
 ```
-The output lies in the Sobel_Filter/OpenCV_Sobel/imgs_out/ folder. If you would like to execute 10 runs of the OpenCV Sobel Filter with a certain input image, then just run:
+The output lies in the Sobel_Filter/OpenCV_Sobel/imgs_out/ folder.
+If you would like to execute 10 runs of the OpenCV Sobel Filter with a certain input image, then just run:
 ```sh
 ./run_experiments.sh <input_image>
 ```
@@ -81,7 +83,6 @@ cd Sobel_Filter/CUDA_Sobel
 ./Debug/CUDA_Sobel imgs_in/512x512.png
 ```
 The output lies in the Sobel_Filter/CUDA_Sobel/imgs_out/ folder. 
-
 If you would like to execute 10 runs of the CUDA Sobel Filter with a certain input image, then just run:
 ```sh
 ./run_experiments.sh <input_image>
