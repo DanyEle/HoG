@@ -1,5 +1,6 @@
 # Native C, CUDA, OpenCV implementations of the Sobel Filter 
 ## Course project for "Programming Tools for Parallel and Distributed Systems"
+## University of Pisa
 ## Department of Computer Science
 ## Academic Year 2018-2019
 
