@@ -340,8 +340,8 @@ int main ( int argc, char** argv )
 		double total_time_gpu_mem = time_alloc_rgb + time_free_rgb + time_copy_gray + time_alloc_h_vec + time_copy_h_vec + time_free_h_vec +
 							  time_alloc_v_vec + time_copy_v_vec + time_free_v_vec + time_alloc_countour + time_copy_countour + time_free_countour;
 
-		//printf("Time spent on GPU memory operations: [%f] ms\n", total_time_gpu_mem); //debug
-		printf("%f \n", total_time_gpu_mem);
+		printf("Time spent on GPU memory operations: [%f] ms\n", total_time_gpu_mem); //debug
+		//printf("%f \n", total_time_gpu_mem);
 
 
 		//##Actual GPU computation##
@@ -359,8 +359,8 @@ int main ( int argc, char** argv )
 		double total_time_gpu_comp = comp_time_load_img + comp_time_convert_img + comp_time_rgb_to_gray + comp_time_str_alloc + comp_time_h_alloc +
 						comp_time_h_grad + comp_time_v_alloc + comp_time_v_grad + comp_time_count_alloc + comp_time_count_merge ;
 
-		//printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp); //debug
-		printf("%f \n", total_time_gpu_comp);
+		printf("Time spent on GPU computation: [%f] ms\n", total_time_gpu_comp); //debug
+		//printf("%f \n", total_time_gpu_comp);
 
 		//##Input/Output over the disk (image loading and final image writing)##
 		double i_o_time_load_img = compute_elapsed_time(i_o_start_load_img, i_o_end_load_img);
@@ -368,14 +368,14 @@ int main ( int argc, char** argv )
 
 		double total_time_i_o = i_o_time_load_img + i_o_time_write_img;
 
-		//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
-		printf("%f \n", total_time_i_o);
+		printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
+		//printf("%f \n", total_time_i_o);
 
 		//##Overall time spent in the program
 		double overall_total_time = total_time_gpu_comp + total_time_gpu_mem + total_time_i_o;
 
-		//printf("Overall time spent in program [%f] ms \n", overall_total_time); //debug
-		printf("%f \n", overall_total_time);
+		printf("Overall time spent in program [%f] ms \n", overall_total_time); //debug
+		//printf("%f \n", overall_total_time);
 
 
 		double time_first_cuda_malloc = compute_elapsed_time(start_first_cuda_malloc, end_first_cuda_malloc);
