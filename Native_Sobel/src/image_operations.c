@@ -35,7 +35,7 @@ void output_gradient(bool intermediate_output, byte * sobel_res, int gray_size, 
 			char * pngConvert[8] = {"convert -size ", str_width, "x", str_height, " -depth 8 ", file_out_grad, " ", png_file_name};
 			char * str_grad_to_PNG = array_strings_to_string(pngConvert, 8, string_buffer_size);
 			system(str_grad_to_PNG);
-			printf("Output [%s] \n", png_file_name);
+			//printf("Output [%s] \n", png_file_name);
 	   }
 }
 

@@ -144,23 +144,23 @@ int main(int argc, char** argv)
 
 	double total_time_i_o = i_o_time_load_img + i_o_time_write_gray_img	+ i_o_time_write_png_img;
 
-	//printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
-	printf("%f \n", total_time_i_o);
+	printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
+	//printf("%f \n", total_time_i_o);
 
 	double comp_time_load_img = compute_elapsed_time(comp_start_load_img, i_o_end_load_img);
 	double comp_time_img_process = compute_elapsed_time(comp_start_image_processing, comp_end_image_processing);
 
 	double total_time_comp = comp_time_load_img + comp_time_img_process;
 
-	//printf("Time spent in computations: [%f] ms\n", total_time_comp); //debug
-	printf("%f \n", total_time_comp);
+	printf("Time spent in computations: [%f] ms\n", total_time_comp); //debug
+	//printf("%f \n", total_time_comp);
 
 	//##Overall total time
 
 	double overall_total_time = total_time_comp + total_time_i_o;
 
-	//printf("Overall time spent in program: [%f] ms\n", overall_total_time); //debug
-	printf("%f \n", overall_total_time);
+	printf("Overall time spent in program: [%f] ms\n", overall_total_time); //debug
+	//printf("%f \n", overall_total_time);
 
 	return 0;
 }

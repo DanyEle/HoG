@@ -160,7 +160,9 @@ int main( int argc, char** argv )
 
 	  double total_time_i_o = i_o_time_read_img + i_o_time_conv_img + i_o_time_write_img;
 
-	  printf("%f \n", total_time_i_o);
+	  //printf("%f \n", total_time_i_o);
+	  printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
+
 
 	  //compute phase
 	  double comp_time_init_vars = compute_elapsed_time(comp_start_init_vars, comp_end_init_vars);
@@ -169,13 +171,15 @@ int main( int argc, char** argv )
 
 	  double total_time_compute = comp_time_init_vars + comp_time_str_sobel + comp_time_sobel_filter;
 
-	  printf("%f \n", total_time_compute);
+	  printf("Time spent in computations: [%f] ms\n", total_time_compute); //debug
+	  //printf("%f \n", total_time_compute);
 
 	  //overall: i/o + compute phase
 
 	  double overall_total_time = total_time_i_o + total_time_compute;
 
-	  printf("%f \n", overall_total_time);
+	  printf("Overall time spent in program: [%f] ms\n", overall_total_time); //debug
+	  //printf("%f \n", overall_total_time);
 
 	  return 0;
 }
