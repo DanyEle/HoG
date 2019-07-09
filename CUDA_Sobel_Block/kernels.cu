@@ -80,24 +80,26 @@ __global__ void it_conv(byte * dev_buffer, int buffer_size, int width, int * dev
 	int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
 	//simple linearization
-	int tid = abs(tid_x - tid_y);
+	int tid = abs(tid_x - tid_y - pixels_per_thread);
 
     // Make convolution for every pixel. Each pixel --> one thread.
     while(tid < buffer_size)
     {
-		//identify the region in the gray-scale image where the convolution is performed
-		make_op_mem(dev_buffer, buffer_size, width, tid, op_mem);
+    	for(int i = 0; i < pixels_per_thread; i++)
+    	{
+			//identify the region in the gray-scale image where the convolution is performed
+			make_op_mem(dev_buffer, buffer_size, width, tid + i, op_mem);
 
-		//actually carry out the convolution
-		dev_res[tid] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
+			//actually carry out the convolution
+			dev_res[tid + i] = (byte) abs(convolution(op_mem, dev_op, SOBEL_OP_SIZE));
+    	}
 		/*
 		 * The abs function is used in here to avoid storing negative numbers
 		 * in a byte data type array. It wouldn't make a different if the negative
 		 * value was to be stored because the next time it is used the value is
 		 * squared.
 		 */
-		tid += (blockDim.x * gridDim.x + blockDim.y * gridDim.y);
-
+		tid += (blockDim.x * gridDim.x + blockDim.y * gridDim.y) + pixels_per_thread;
     }
 }
 
