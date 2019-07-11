@@ -88,4 +88,26 @@ If you would like to execute 10 runs of the CUDA Sobel Filter with a certain inp
 ./run_experiments.sh <input_image>
 ```
 
+## 6 - CUDA with multiple pixels per thread
+
+In order to run the CUDA version using multiple pixels per thread, just follow the instructions
+for the plain CUDA version and run the following commands:
+
+```sh
+cd $HOME
+cd Sobel_Filter/CUDA_Sobel_Block
+./compile.sh
+./Debug/CUDA_Sobel imgs_in/512x512.png 2
+```
+The output lies in the Sobel_Filter/CUDA_Sobel/imgs_out/ folder. 
+If you would like to execute 10 runs of the CUDA Sobel Filter with a certain input image
+and a certain amount of pixels per thread, then just run:
+```sh
+./run_experiments.sh <input_image> <amount_of_pixels>
+```
+ 
+
+
+
+
 
