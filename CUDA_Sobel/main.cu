@@ -382,6 +382,12 @@ int main ( int argc, char** argv )
 
 		//printf("First cuda malloc has taken [%f] ms\n", time_first_cuda_malloc);
 
+		//let's deallocate the heap memory to avoid any memory leaks
+		free(gray_image);
+		free(sobel_h_res);
+		free(sobel_v_res);
+		free(countour_img);
+
 	    return 0;
 
 }

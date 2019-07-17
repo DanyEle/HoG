@@ -149,21 +149,21 @@ char * array_strings_to_string(const char ** strings, int stringsAmount, int buf
 //Output: dim_vector: the vector extracted from the RGB vector image corresponding to the dimension specified
 void get_dimension_from_RGB_vec(int dimension, byte* rgbImage,  byte** dim_vector, int gray_size)
 {
-	 // Take size for gray image and allocate memory. Just one dimension for gray-scale image
-	    * dim_vector = (byte*) malloc(sizeof(byte) * gray_size);
+	// Take size for gray image and allocate memory. Just one dimension for gray-scale image
+	* dim_vector = (byte*) malloc(sizeof(byte) * gray_size);
 
-	    // Make pointers for iteration
-	    byte *p_rgb = rgbImage;
-	    byte *p_gray = *dim_vector;
+	// Make pointers for iteration
+	byte *p_rgb = rgbImage;
+	byte *p_gray = *dim_vector;
 
-	    // Calculate the value for every pixel in gray
-	    for(int i=0; i < gray_size; i++)
-	    {
-	    	//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
-	        *p_gray = p_rgb[dimension];
-	        p_rgb += 3;
-	        p_gray++;
-	    }
+	// Calculate the value for every pixel in gray
+	for(int i=0; i < gray_size; i++)
+	{
+		//Formula according to: https://stackoverflow.com/questions/17615963/standard-rgb-to-grayscale-conversion
+		*p_gray = p_rgb[dimension];
+		p_rgb += 3;
+		p_gray++;
+	}
 }
 
 
