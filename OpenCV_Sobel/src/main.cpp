@@ -163,7 +163,6 @@ int main( int argc, char** argv )
 	  //printf("%f \n", total_time_i_o);
 	  printf("Time spent on I/O operations from/to disk: [%f] ms\n", total_time_i_o); //debug
 
-
 	  //compute phase
 	  double comp_time_init_vars = compute_elapsed_time(comp_start_init_vars, comp_end_init_vars);
 	  double comp_time_str_sobel = compute_elapsed_time(comp_start_str_sobel, comp_end_str_sobel);
@@ -180,6 +179,15 @@ int main( int argc, char** argv )
 
 	  printf("Overall time spent in program: [%f] ms\n", overall_total_time); //debug
 	  //printf("%f \n", overall_total_time);
+
+	  //let's free the memory
+	  src.release();
+	  src_gray.release();
+	  grad_x.release();
+	  grad_y.release();
+	  abs_grad_x.release();
+	  abs_grad_y.release();
+	  grad.release();
 
 	  return 0;
 }

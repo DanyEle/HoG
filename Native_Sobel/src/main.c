@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 	//Load up the input image in RGB format into one single flattened array (rgb_image)
 	read_file(file_output_RGB, &rgb_image, rgb_size);
 
-	//#########2. STEP - CONVERT IMAGE TO GRAY-SCALE #################À
+	//#########2. STEP - CONVERT IMAGE TO GRAY-SCALE #################
 
 	//convert the width and height to char *
 	char str_width[100];
@@ -162,6 +162,11 @@ int main(int argc, char** argv)
 	printf("Overall time spent in program: [%f] ms\n", overall_total_time); //debug
 	//printf("%f \n", overall_total_time);
 
+	//let's deallocate the memory to avoid any memory leaks
+	free(grayImage);
+	free(sobel_h_res);
+	free(sobel_v_res);
+	free(countour_img);
 	return 0;
 }
 
