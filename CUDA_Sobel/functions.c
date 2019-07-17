@@ -10,16 +10,13 @@
 typedef unsigned char byte;
 
 
-/*
- * Reads file to *buffer.
- * We load a matrix as a#include "file_operations.h"
- *  "squashed" array
- * next pixel extracted as:
- * buffer += 3
- * buffer[0] = 0th-pixel R
- * buffer[1] = 1st-pixel G
- * buffer[2] = 2nd-pixel B
- */
+//Input: file_name: the name of the file to be loaded
+//  	 buffer_size: amount of RGB pixels to be loaded
+//Output: buffer: the RGB pixels of the loaded image. It can be read as:
+//buffer[0] = R-pixel
+//buffer[1] = G-pixel
+//buffer[2] = B-pixel
+//buffer += 3 to get the next pixel
 
 void read_file(const char *file_name, byte **buffer, int buffer_size)
 {
@@ -40,9 +37,10 @@ void read_file(const char *file_name, byte **buffer, int buffer_size)
     fclose(file);
 }
 
-/*
- *
- * Writes the RGB/gray-scale buffer to a file
+/*Input: file_name: the name of the file onto which the buffer content needs to be written
+ *		  buffer: an array containing RGB/gray-scale pixels to be written to a file
+ *		  buffer_size: the size of the buffer to be written
+ *Output: <none>. As a side effect, the content of 'buffer' is written to file_name
  */
 
 void write_file(const char *file_name, byte *buffer, int buffer_size) //was * buffer
@@ -167,6 +165,9 @@ void get_dimension_from_RGB_vec(int dimension, byte* rgbImage,  byte** dim_vecto
 }
 
 
+//Input: time_begin: a struct storing the begin time
+//		 time_end: a struct storing the end time
+//		Output: the time elapsed as (time_end - time_begin)
 double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
 {
 	//time in microseconds (us)
@@ -179,9 +180,18 @@ double compute_elapsed_time(struct timeval time_begin, struct timeval time_end)
 }
 
 
-//Functions to output files to disk
+//#####Functions used to output files to disk######
 
 
+
+//Input: intermediate_output: true --> the content of gray_image is output to file_gray_name and then converted to png_file_name
+//					          false --> the image is not output
+//		 buffer_image: an array containing the bytes to be output to file_gray_name and converted to png_file_name
+//		 buffer_size: the size of the 'buffer_image' output
+//		 str_width: the width of the output image in string format (ex: "512")
+//		 str_height: the height of the output image in string format (ex: "512")
+//		 str_buffer_size: the amount of bytes to be allocated for producing the string supplied to the OS for conversion to PNG
+//	     png_file_name: the
 //Output: imgs_out/img_gray.png as an image containing the gray-scale input image
 void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, const char * png_file_name)
 {
@@ -194,7 +204,7 @@ void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gr
 		const char * str_gray_to_PNG = array_strings_to_string(PNG_convert_to_gray, 8, string_buffer_size);
 		system(str_gray_to_PNG);
 
-		printf("Output gray-scale image [%s] \n", file_gray);
+		//printf("Output gray-scale image [%s] \n", file_gray);
 	}
 
 }

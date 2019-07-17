@@ -6,11 +6,12 @@
 #include <string.h>
 
 
-
 typedef unsigned char byte;
 
 
 /*
+ * Input: file_name: the name of the file (actually, image) to be read
+ *		  buffer_size: the total amount of pixels present in the image to be read
  * Reads file to *buffer.
  * We load a matrix as a#include "file_operations.h"
  *  "squashed" array

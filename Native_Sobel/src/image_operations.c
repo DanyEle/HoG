@@ -101,6 +101,10 @@ void make_op_mem(byte *buffer, int buffer_size, int width, int cindex, byte *op_
 }
 
 
+//Input: X: an X coordinate
+//		 Y: a Y coordinate
+//		 c_size: the size of the areas into which convolution should be performed
+//Output: the convolution in the area specified
 int convolution(byte *X, int *Y, int c_size)
 {
     int sum = 0;
