@@ -4,7 +4,14 @@
 
 #include "file_operations.h"
 
-
+//Input: intermediate_output: true --> the content of gray_image is output to file_gray_name and then converted to png_file_name
+//					          false --> the image is not output
+//		 buffer_image: an array containing the bytes to be output to file_gray_name and converted to png_file_name
+//		 buffer_size: the size of the 'buffer_image' output
+//		 str_width: the width of the output image in string format (ex: "512")
+//		 str_height: the height of the output image in string format (ex: "512")
+//		 str_buffer_size: the amount of bytes to be allocated for producing the string supplied to the OS for conversion to PNG
+//	     png_file_name: the
 //Output: imgs_out/img_gray.png as an image containing the gray-scale input image
 void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)
 {
@@ -22,6 +29,7 @@ void output_gray_scale_image(bool intermediate_output, byte * gray_image, int gr
 
 }
 
+//see 'output_gray_scale_image'
 //Used both for horizontal gradient and vertical gradient
 //sobel_res = sobel_h_res or sobel_v_res
 void output_gradient(bool intermediate_output, byte * sobel_res, int gray_size, char * str_width, char * str_height, int string_buffer_size, char * png_file_name)

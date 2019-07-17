@@ -11,12 +11,12 @@ typedef unsigned char byte;
 
 //Input: file_name: the name of the file to be loaded
 //  	 buffer_size: amount of RGB pixels to be loaded
-//Output: buffer: the RGB pixels of the loaded image
-//The next pixel can be extracted as:
-//buffer += 3
+//Output: buffer: the RGB pixels of the loaded image. It can be read as:
 //buffer[0] = R-pixel
 //buffer[1] = G-pixel
 //buffer[2] = B-pixel
+//buffer += 3 to get the next pixel
+
 void read_file(char *file_name, byte **buffer, int buffer_size)
 {
     //Open file
@@ -36,11 +36,11 @@ void read_file(char *file_name, byte **buffer, int buffer_size)
     fclose(file);
 }
 
-/*
- *
- * Writes the RGB/gray-scale buffer to a file
+/*Input: file_name: the name of the file onto which the buffer content needs to be written
+ *		  buffer: an array containing RGB/gray-scale pixels to be written to a file
+ *		  buffer_size: the size of the buffer to be written
+ *Output: <none>. As a side effect, the content of 'buffer' is written to file_name
  */
-
 void write_file(char *file_name, byte *buffer, int buffer_size)
 {
     // Open
