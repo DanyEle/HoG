@@ -13,7 +13,7 @@ For further information, please refer to [Sobel Operator](https://en.wikipedia.o
 
 For a report on the performance comparison between the Native C, CUDA, OpenCV versions of the Sobel Filter, please refer to the 'SPD_Project_Report_Daniele_Gadler_5_0.pdf' file in the present repository.
 
-[Sobel Filter image](sobel_filter_picture.PNG)
+![Sobel Filter image](sobel_filter_picture.PNG)
 
 ### Installation
 The 'imagemagick' package is required for converting input PNG/JPG/GIF images to RGB format, an encoding-independent format taken as input by the present program. 
